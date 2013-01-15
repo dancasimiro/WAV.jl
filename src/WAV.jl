@@ -1,5 +1,4 @@
 # -*- mode: julia; -*-
-# sound.jl
 require("Options")
 
 module WAV
