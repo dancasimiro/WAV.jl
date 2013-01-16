@@ -39,7 +39,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
     ## Check for the common header identifiers
     seek(io, 0)
     @assert read(io, Uint8, 4) == b"RIFF"
-    @assert read(io, Uint32) == file_size - 8
+    @assert WAV.read_le(io, Uint32) == file_size - 8
     @assert read(io, Uint8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
