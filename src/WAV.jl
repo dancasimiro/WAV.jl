@@ -202,28 +202,11 @@ function pcm_container_type(nbits::Unsigned)
     return  Uint8
 end
 
-function ieee_float_container_type(nbits::Unsigned)
-    if nbits == 32
-        return Float32
-    elseif nbits == 64
-        return Float64
-    end
-    error("'$(int(nbits))' is an invalid bit width for IEEE float")
-end
+ieee_float_container_type(nbits::Unsigned) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
-# read blocks of samples where nbits matches a native Julia bits type
-function read_bitstype_blocks!(io::IO, samples::Array)
-    for i = 1:size(samples, 1) # for each block
-        for j = 1:size(samples, 2) # for each channel
-            samples[i, j] = read_le(io, eltype(samples))
-        end
-    end
-    samples
-end
-
-# read blocks that use an odd number of bits (i.e. 24 bit samples)
-function read_custom_blocks!(io::IO, samples::Array, fmt::WAVFormat)
-    # number of bytes per sample
+function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
+    const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
+    samples = Array(pcm_container_type(fmt.nbits), nblocks, fmt.nchannels)
     const nbytes = iceil(fmt.nbits / 8)
     const bitshift = linspace(0, 64, 9)
     const mask = unsigned(1) << (fmt.nbits - 1)
@@ -246,20 +229,16 @@ function read_custom_blocks!(io::IO, samples::Array, fmt::WAVFormat)
     samples
 end
 
-function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
-    nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
-    samples = Array(pcm_container_type(fmt.nbits), nblocks, fmt.nchannels)
-    if fmt.nbits == 8 || fmt.nbits == 16 || fmt.nbits == 32 || fmt.nbits == 64
-        read_bitstype_blocks!(io, samples)
-    else
-        read_custom_blocks!(io, samples, fmt)
+function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
+    const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
+    const floatType = ieee_float_container_type(fmt.nbits)
+    samples = Array(floatType, nblocks, fmt.nchannels)
+    for i = 1:nblocks
+        for j = 1:fmt.nchannels
+            samples[i, j] = read_le(io, floatType)
+        end
     end
     samples
-end
-
-function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
-    nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
-    read_bitstype_blocks!(io, Array(ieee_float_container_type(fmt.nbits), nblocks, fmt.nchannels))
 end
 
 # PCM data is two's-complement except for resolutions of 1-8 bits, which are represented as offset binary.
@@ -300,16 +279,7 @@ function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, opts::Options)
     samples
 end
 
-function clamp_and_write_bitstype_blocks{T<:Real}(io::IO, samples::Array{T}, minval::T, maxval::T)
-    # Interleave the channel samples before writing to the stream.
-    for i = 1:size(samples, 1) # for each sample
-        for j = 1:size(samples, 2) # for each channel
-            write_le(io, clamp(samples[i, j], minval, maxval))
-        end
-    end
-end
-
-function clamp_and_write_custom_blocks(io::IO, samples::Array, fmt::WAVFormat)
+function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T})
     # number of bytes per sample
     const nbytes = iceil(fmt.nbits / 8)
     const bitshift = linspace(0, 64, 9)
@@ -329,15 +299,6 @@ function clamp_and_write_custom_blocks(io::IO, samples::Array, fmt::WAVFormat)
     end
 end
 
-function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T})
-    if fmt.nbits == 8 || fmt.nbits == 16 || fmt.nbits == 32 || fmt.nbits == 64
-        return clamp_and_write_bitstype_blocks(io, samples, typemin(T), typemax(T))
-    else
-        return clamp_and_write_custom_blocks(io, samples, fmt)
-    end
-    error("Unsupported bit width")
-end
-
 function write_pcm_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Array{T})
     # Scale the floating point values to the PCM range
     if fmt.nbits > 8
@@ -351,8 +312,16 @@ function write_pcm_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Ar
 end
 
 function write_ieee_float_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Array{T})
-    MyType = fmt.nbits == 32 ? Float32 : (fmt.nbits == 64 ? Float64 : error("$(fmt.nbits) bits is not supported for WAVE_FORMAT_IEEE_FLOAT."))
-    return clamp_and_write_bitstype_blocks(io, convert(Array{MyType}, samples), convert(MyType, -1.0), convert(MyType, 1.0))
+    const floatType = ieee_float_container_type(fmt.nbits)
+    samples = convert(Array{floatType}, samples)
+    const minval = convert(floatType, -1.0)
+    const maxval = convert(floatType, 1.0)
+    # Interleave the channel samples before writing to the stream.
+    for i = 1:size(samples, 1) # for each sample
+        for j = 1:size(samples, 2) # for each channel
+            write_le(io, clamp(samples[i, j], minval, maxval))
+        end
+    end
 end
 
 function write_data(io::IO, fmt::WAVFormat, ext_fmt::WAVFormatExtension, samples::Array)
