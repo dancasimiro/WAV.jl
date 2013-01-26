@@ -4,7 +4,7 @@ require("Options")
 module WAV
 using OptionsMod
 
-export wavread, wavwrite, WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT
+export wavread, wavwrite, WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
 import Base.unbox, Base.box
 
 # The WAV specification states that numbers are written to disk in little endian form.
@@ -79,6 +79,8 @@ WAVFormat(comp, chan, fs, bytes, ba, nbits) = WAVFormat(comp, chan, fs, bytes, b
 
 const WAVE_FORMAT_PCM        = 0x0001 # PCM
 const WAVE_FORMAT_IEEE_FLOAT = 0x0003 # IEEE float
+const WAVE_FORMAT_ALAW       = 0x0006 # A-Law
+const WAVE_FORMAT_MULAW      = 0x0007 # Mu-Law
 const WAVE_FORMAT_EXTENSIBLE = 0xfffe # Extension!
 
 # used by WAVE_FORMAT_EXTENSIBLE
@@ -241,6 +243,105 @@ function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
     samples
 end
 
+function read_mulaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
+    # Quantized μ-law algorithm -- Use a look up table to convert
+    # From Wikipedia, ITU-T Recommendation G.711 and G.191 specify the following intervals:
+    #
+    # ---------------------------------------+--------------------------------
+    #  14 bit Binary Linear input code       | 8 bit Compressed code
+    # ---------------------------------------+--------------------------------
+    # +8158 to +4063 in 16 intervals of 256  |  0x80 + interval number
+    # +4062 to +2015 in 16 intervals of 128  |  0x90 + interval number
+    # +2014 to +991 in 16 intervals of 64    |  0xA0 + interval number
+    # +990 to +479 in 16 intervals of 32     |  0xB0 + interval number
+    # +478 to +223 in 16 intervals of 16     |  0xC0 + interval number
+    # +222 to +95 in 16 intervals of 8       |  0xD0 + interval number
+    # +94 to +31 in 16 intervals of 4        |  0xE0 + interval number
+    # +30 to +1 in 15 intervals of 2         |  0xF0 + interval number
+    # 0                                      |  0xFF
+    # −1                                     |  0x7F
+    # −31 to −2 in 15 intervals of 2         |  0x70 + interval number
+    # −95 to −32 in 16 intervals of 4        |  0x60 + interval number
+    # −223 to −96 in 16 intervals of 8       |  0x50 + interval number
+    # −479 to −224 in 16 intervals of 16     |  0x40 + interval number
+    # −991 to −480 in 16 intervals of 32     |  0x30 + interval number
+    # −2015 to −992 in 16 intervals of 64    |  0x20 + interval number
+    # −4063 to −2016 in 16 intervals of 128  |  0x10 + interval number
+    # −8159 to −4064 in 16 intervals of 256  |  0x00 + interval number
+    # ---------------------------------------+--------------------------------
+    const MuLawDecompressTable =
+    [
+    linspace(-8159, -4064, 16);
+    linspace(-3935, -2016, 16);
+    linspace(-1951,  -992, 16);
+    linspace( -959,  -480, 16);
+    linspace( -463,  -224, 16);
+    linspace( -215,   -96, 16);
+    linspace(  -91,   -32, 16);
+    linspace(  -29,    -2, 15);
+    -1;
+    0;
+    linspace(    3,    30, 15);
+    linspace(   35,    94, 16);
+    linspace(  103,   222, 16);
+    linspace(  223,   478, 16);
+    linspace(  479,   990, 16);
+    linspace(  991,  2014, 16);
+    linspace( 2015,  4062, 16);
+    linspace( 4063,  8158, 16);
+     ]
+    @assert length(MuLawDecompressTable) == 256
+    nsamples = uint(chunk_size / fmt.block_align)
+    nblocks = uint(nsamples * fmt.nchannels)
+    blocks = read(io, Uint8, nblocks)
+    samples = zeros(Int16, nsamples, fmt.nchannels)
+    for i = 1:nsamples
+        for j = 1:fmt.nchannels
+            samples[i, j] = MuLawDecompressTable[clamp(blocks[(i - 1) * fmt.nchannels + j], 0, 255)]
+        end
+    end
+    return samples
+end
+
+#function write_mulaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
+#    const cBias = 0x84
+#    const cClip = 32635
+#
+#    const MuLawCompressTable =
+#    [
+#    0,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,
+#    4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
+#    5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
+#    5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
+#    6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+#    6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+#    6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+#    6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+#    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+#    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+#    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+#    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+#    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+#    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+#    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+#    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
+#     ]
+#
+#    sign = (sample >> 8) & 0x80;
+#    if sign
+#        sample = (short)-sample
+#    end
+#    if sample > cClip
+#        sample = cClip
+#    end
+#    sample = (short)(sample + cBias)
+#    exponent = (int)MuLawCompressTable[(sample>>7) & 0xFF];
+#    mantissa = (sample >> (exponent+3)) & 0x0F
+#    compressedByte = ~ (sign | (exponent << 4) | mantissa)
+#
+#    return (unsigned char)compressedByte
+#end
+
 # PCM data is two's-complement except for resolutions of 1-8 bits, which are represented as offset binary.
 
 # support every bit width from 1 to 8 bits
@@ -270,6 +371,8 @@ function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, opts::Options)
         convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
     elseif fmt.compression_code == WAVE_FORMAT_IEEE_FLOAT
         samples = read_ieee_float_samples(io, chunk_size, fmt)
+    elseif fmt.compression_code == WAVE_FORMAT_MULAW
+        samples = read_mulaw_samples(io, chunk_size, fmt)
     else
         error("$(fmt.compression_code) is an unsupported compression code!")
     end
