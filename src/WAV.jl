@@ -297,7 +297,7 @@ function read_mulaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
     samples = zeros(Int16, nsamples, fmt.nchannels)
     for i = 1:nsamples
         for j = 1:fmt.nchannels
-            samples[i, j] = MuLawDecompressTable[clamp(blocks[(i - 1) * fmt.nchannels + j], 0, 255)]
+            samples[i, j] = MuLawDecompressTable[clamp(blocks[(i - 1) * fmt.nchannels + j] + 1, 1, 256)]
         end
     end
     return samples
