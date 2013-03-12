@@ -243,6 +243,21 @@ function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
     samples
 end
 
+function read_companded_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, table::Array)
+    nsamples = uint(chunk_size / fmt.block_align)
+    nblocks = uint(nsamples * fmt.nchannels)
+    blocks = read(io, Uint8, nblocks)
+    samples = zeros(Int16, nsamples, fmt.nchannels)
+    for i = 1:nsamples
+        for j = 1:fmt.nchannels
+            # add one to value from blocks because A-law stores values from 0 to 255.
+            # Julia indexing is 1-based; I need a value from 1 to 256
+            samples[i, j] = table[clamp(blocks[(i - 1) * fmt.nchannels + j] + 1, 1, 256)]
+        end
+    end
+    return samples
+end
+
 function read_mulaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
     # Quantized μ-law algorithm -- Use a look up table to convert
     # From Wikipedia, ITU-T Recommendation G.711 and G.191 specify the following intervals:
@@ -291,16 +306,7 @@ function read_mulaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
     linspace( 4063,  8158, 16);
      ]
     @assert length(MuLawDecompressTable) == 256
-    nsamples = uint(chunk_size / fmt.block_align)
-    nblocks = uint(nsamples * fmt.nchannels)
-    blocks = read(io, Uint8, nblocks)
-    samples = zeros(Int16, nsamples, fmt.nchannels)
-    for i = 1:nsamples
-        for j = 1:fmt.nchannels
-            samples[i, j] = MuLawDecompressTable[clamp(blocks[(i - 1) * fmt.nchannels + j] + 1, 1, 256)]
-        end
-    end
-    return samples
+    return read_companded_samples(io, chunk_size, fmt, MuLawDecompressTable)
 end
 
 function read_alaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
@@ -341,19 +347,7 @@ function read_alaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
     944,   912,  1008,   976,   816,   784,   880,   848 
      ]
     @assert length(ALawDecompressTable) == 256
-    nsamples = uint(chunk_size / fmt.block_align)
-    nblocks = uint(nsamples * fmt.nchannels)
-    blocks = read(io, Uint8, nblocks)
-    samples = zeros(Int16, nsamples, fmt.nchannels)
-    for i = 1:nsamples
-        for j = 1:fmt.nchannels
-            index = int(blocks[(i - 1) * fmt.nchannels + j] + 1)
-            # add one to value from blocks because A-law stores values from 0 to 255.
-            # Julia indexing is 1-based; I need a value from 1 to 256
-            samples[i, j] = ALawDecompressTable[clamp(blocks[(i - 1) * fmt.nchannels + j] + 1, 1, 256)]
-        end
-    end
-    return samples
+    return read_companded_samples(io, chunk_size, fmt, ALawDecompressTable)
 end
 
 #function write_mulaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
