@@ -1,8 +1,5 @@
 ## -*-Julia-*-
 ## Test suite for Julia's WAV module
-
-require("WAV")
-require("Options")
 using WAV
 using OptionsMod
 
