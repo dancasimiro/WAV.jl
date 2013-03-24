@@ -26,8 +26,10 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
     tol = 2.0 / (2.0^nbits - 1)
 
     in_data = rand(nsamples, nchans)
-    @assert max(in_data) <= 1.0
-    @assert min(in_data) >= -1.0
+    if nsamples > 0
+        @assert max(in_data) <= 1.0
+        @assert min(in_data) >= -1.0
+    end
     io = memio()
     WAV.wavwrite(in_data, io, @options Fs=fs nbits=nbits compression=WAV.WAVE_FORMAT_PCM)
     flush(io)
@@ -53,7 +55,9 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
     @assert out_fs == fs
     @assert out_nbits == nbits
     @assert out_extra == None
-    @assert absdiff(out_data, in_data) < tol
+    if nsamples > 0
+        @assert absdiff(out_data, in_data) < tol
+    end
 
     ## test the "subrange" option.
     if nsamples > 0
