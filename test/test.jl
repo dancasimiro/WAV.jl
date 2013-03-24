@@ -1,6 +1,6 @@
 ## -*-Julia-*-
 ## Test suite for Julia's WAV module
-using WAV
+reload("WAV.jl")
 using OptionsMod
 
 # These float array comparison functions are from dists.jl
@@ -29,7 +29,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
     @assert max(in_data) <= 1.0
     @assert min(in_data) >= -1.0
     io = memio()
-    wavwrite(in_data, io, @options Fs=fs nbits=nbits compression=WAVE_FORMAT_PCM)
+    WAV.wavwrite(in_data, io, @options Fs=fs nbits=nbits compression=WAV.WAVE_FORMAT_PCM)
     flush(io)
     file_size = position(io)
 
@@ -41,11 +41,11 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
-    sz = wavread(io, @options format="size")
+    sz = WAV.wavread(io, @options format="size")
     @assert sz == (nsamples, nchans)
 
     seek(io, 0)
-    out_data, out_fs, out_nbits, out_extra = wavread(io)
+    out_data, out_fs, out_nbits, out_extra = WAV.wavread(io)
     @assert length(out_data) == nsamples * nchans
     @assert size(out_data, 1) == nsamples
     @assert size(out_data, 2) == nchans
@@ -60,7 +60,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         seek(io, 0)
         # Don't convert to Int, test if passing a float (nsamples/2) behaves as expected
         subsamples = min(10, nsamples / 2)
-        out_data, out_fs, out_nbits, out_extra = wavread(io, @options subrange=subsamples)
+        out_data, out_fs, out_nbits, out_extra = WAV.wavread(io, @options subrange=subsamples)
         @assert length(out_data) == subsamples * nchans
         @assert size(out_data, 1) == subsamples
         @assert size(out_data, 2) == nchans
@@ -72,7 +72,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
 
         seek(io, 0)
         sr = convert(Int, min(5, nsamples / 2)):convert(Int, min(23, nsamples - 1))
-        out_data, out_fs, out_nbits, out_extra = wavread(io, @options subrange=sr)
+        out_data, out_fs, out_nbits, out_extra = WAV.wavread(io, @options subrange=sr)
         @assert length(out_data) == length(sr) * nchans
         @assert size(out_data, 1) == length(sr)
         @assert size(out_data, 2) == nchans
@@ -88,11 +88,11 @@ end
 for nchans = (1,2,4)
     in_data_8 = reshape(typemin(Uint8):typemax(Uint8), int(256 / nchans), nchans)
     io = memio()
-    wavwrite(in_data_8, io)
+    WAV.wavwrite(in_data_8, io)
     flush(io)
 
     seek(io, 0)
-    out_data_8, fs, nbits, extra = wavread(io, @options format="native")
+    out_data_8, fs, nbits, extra = WAV.wavread(io, @options format="native")
     @assert fs == 8000
     @assert nbits == 8
     @assert extra == None
@@ -103,11 +103,11 @@ end
 for nchans = (1,2,4)
     in_data_16 = reshape(typemin(Int16):typemax(Int16), int(65536 / nchans), nchans)
     io = memio()
-    wavwrite(in_data_16, io)
+    WAV.wavwrite(in_data_16, io)
     flush(io)
 
     seek(io, 0)
-    out_data_16, fs, nbits, extra = wavread(io, @options format="native")
+    out_data_16, fs, nbits, extra = WAV.wavread(io, @options format="native")
     @assert fs == 8000
     @assert nbits == 16
     @assert extra == None
@@ -118,11 +118,11 @@ end
 for nchans = (1,2,4)
     in_data_24 = convert(Array{Int32}, reshape(-63:64, int(128 / nchans), nchans))
     io = memio()
-    wavwrite(in_data_24, io)
+    WAV.wavwrite(in_data_24, io)
     flush(io)
 
     seek(io, 0)
-    out_data_24, fs, nbits, extra = wavread(io, @options format="native")
+    out_data_24, fs, nbits, extra = WAV.wavread(io, @options format="native")
     @assert fs == 8000
     @assert nbits == 24
     @assert extra == None
@@ -133,11 +133,11 @@ end
 for nchans = (1,2,4)
     in_data_single = convert(Array{Float32}, reshape(linspace(-1.0, 1.0, 128), int(128 / nchans), nchans))
     io = memio()
-    wavwrite(in_data_single, io)
+    WAV.wavwrite(in_data_single, io)
     flush(io)
 
     seek(io, 0)
-    out_data_single, fs, nbits, extra = wavread(io, @options format="native")
+    out_data_single, fs, nbits, extra = WAV.wavread(io, @options format="native")
     @assert fs == 8000
     @assert nbits == 32
     @assert extra == None
@@ -149,11 +149,11 @@ for nchans = (1,2,4)
     nsamps = int(128 / nchans)
     in_data_single = convert(Array{Float32}, reshape(-63:64, nsamps, nchans))
     io = memio()
-    wavwrite(in_data_single, io)
+    WAV.wavwrite(in_data_single, io)
     flush(io)
 
     seek(io, 0)
-    out_data_single, fs, nbits, extra = wavread(io, @options format="native")
+    out_data_single, fs, nbits, extra = WAV.wavread(io, @options format="native")
     @assert fs == 8000
     @assert nbits == 32
     @assert extra == None
