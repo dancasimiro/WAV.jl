@@ -208,7 +208,7 @@ function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
     const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
     samples = Array(pcm_container_type(fmt.nbits), nblocks, fmt.nchannels)
     const nbytes = iceil(fmt.nbits / 8)
-    const bitshift = linspace(0, 64, 9)
+    const bitshift::Array{Uint} = linspace(0, 64, 9)
     const mask = unsigned(1) << (fmt.nbits - 1)
     const signextend_mask = ~unsigned(0) << fmt.nbits
     for i = 1:size(samples, 1)
@@ -282,7 +282,7 @@ end
 function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T})
     # number of bytes per sample
     const nbytes = iceil(fmt.nbits / 8)
-    const bitshift = linspace(0, 64, 9)
+    const bitshift::Array{Uint} = linspace(0, 64, 9)
     const minval = fmt.nbits > 8 ? -2^(fmt.nbits - 1) : -2^(fmt.nbits)
     const maxval = fmt.nbits > 8 ? 2^(fmt.nbits - 1) - 1 : 2^(fmt.nbits) - 1
     for i = 1:size(samples, 1)
