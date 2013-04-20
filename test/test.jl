@@ -1,7 +1,6 @@
 ## -*-Julia-*-
 ## Test suite for Julia's WAV module
 reload("WAV.jl")
-using OptionsMod
 
 # These float array comparison functions are from dists.jl
 function absdiff{T<:Real}(current::AbstractArray{T}, target::AbstractArray{T})
@@ -31,7 +30,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @assert min(in_data) >= -1.0
     end
     io = memio()
-    WAV.wavwrite(in_data, io, @options Fs=fs nbits=nbits compression=WAV.WAVE_FORMAT_PCM)
+    WAV.wavwrite(in_data, io, Fs=fs, nbits=nbits, compression=WAV.WAVE_FORMAT_PCM)
     flush(io)
     file_size = position(io)
 
@@ -43,7 +42,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
-    sz = WAV.wavread(io, @options format="size")
+    sz = WAV.wavread(io, format="size")
     @assert sz == (nsamples, nchans)
 
     seek(io, 0)
@@ -64,7 +63,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         seek(io, 0)
         # Don't convert to Int, test if passing a float (nsamples/2) behaves as expected
         subsamples = min(10, nsamples / 2)
-        out_data, out_fs, out_nbits, out_extra = WAV.wavread(io, @options subrange=subsamples)
+        out_data, out_fs, out_nbits, out_extra = WAV.wavread(io, subrange=subsamples)
         @assert length(out_data) == subsamples * nchans
         @assert size(out_data, 1) == subsamples
         @assert size(out_data, 2) == nchans
@@ -76,7 +75,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
 
         seek(io, 0)
         sr = convert(Int, min(5, nsamples / 2)):convert(Int, min(23, nsamples - 1))
-        out_data, out_fs, out_nbits, out_extra = WAV.wavread(io, @options subrange=sr)
+        out_data, out_fs, out_nbits, out_extra = WAV.wavread(io, subrange=sr)
         @assert length(out_data) == length(sr) * nchans
         @assert size(out_data, 1) == length(sr)
         @assert size(out_data, 2) == nchans
@@ -96,7 +95,7 @@ for nchans = (1,2,4)
     flush(io)
 
     seek(io, 0)
-    out_data_8, fs, nbits, extra = WAV.wavread(io, @options format="native")
+    out_data_8, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 8
     @assert extra == None
@@ -111,7 +110,7 @@ for nchans = (1,2,4)
     flush(io)
 
     seek(io, 0)
-    out_data_16, fs, nbits, extra = WAV.wavread(io, @options format="native")
+    out_data_16, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 16
     @assert extra == None
@@ -126,7 +125,7 @@ for nchans = (1,2,4)
     flush(io)
 
     seek(io, 0)
-    out_data_24, fs, nbits, extra = WAV.wavread(io, @options format="native")
+    out_data_24, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 24
     @assert extra == None
@@ -141,7 +140,7 @@ for nchans = (1,2,4)
     flush(io)
 
     seek(io, 0)
-    out_data_single, fs, nbits, extra = WAV.wavread(io, @options format="native")
+    out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 32
     @assert extra == None
@@ -157,7 +156,7 @@ for nchans = (1,2,4)
     flush(io)
 
     seek(io, 0)
-    out_data_single, fs, nbits, extra = WAV.wavread(io, @options format="native")
+    out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 32
     @assert extra == None

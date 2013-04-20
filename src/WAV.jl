@@ -1,9 +1,5 @@
 # -*- mode: julia; -*-
-require("Options")
-
 module WAV
-using OptionsMod
-
 export wavread, wavwrite, WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT
 import Base.unbox, Base.box
 
@@ -249,8 +245,8 @@ convert_pcm_to_double(samples::Array{Int8}, nbits::Integer) = error("WAV files u
 # support every bit width from 9 to 64 bits
 convert_pcm_to_double{T<:Signed}(samples::Array{T}, nbits::Integer) = convert(Array{Float64}, samples) / (2^(nbits - 1) - 1)
 
-function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, opts::Options)
-    @defaults opts format="double"
+function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, format::String)
+    # "format" is the format of values, while "fmt" is the WAV file level format
     samples = None
     convert_to_double = x -> convert(Array{Float64}, x)
     if fmt.compression_code == WAVE_FORMAT_EXTENSIBLE
@@ -350,8 +346,7 @@ get_data_range(samples::Array, subrange::Real) = samples[1:convert(Int, subrange
 get_data_range(samples::Array, subrange::Range1{Int}) = samples[subrange, :]
 get_data_range(samples::Array, subrange::Range1{Real}) = samples[convert(Range1{Int}, subrange), :]
 
-function wavread(io::IO, opts::Options)
-    @defaults opts subrange=Any format="double"
+function wavread(io::IO; subrange=Any, format="double")
     chunk_size = read_header(io)
     fmt = WAVFormat()
     samples = Array(Float64)
@@ -372,10 +367,9 @@ function wavread(io::IO, opts::Options)
             fmt = read_format(io, subchunk_size)
         elseif subchunk_id == b"data"
             if format == "size"
-                @check_used opts
                 return int(subchunk_size / fmt.block_align), int(fmt.nchannels)
             end
-            samples = read_data(io, subchunk_size, fmt, opts)
+            samples = read_data(io, subchunk_size, fmt, format)
         else
             # return unknown sub-chunks?
             # Note: Ignoring unknown sub chunks for now
@@ -383,29 +377,23 @@ function wavread(io::IO, opts::Options)
         end
     end
     samples = get_data_range(samples, subrange)
-    @check_used opts
     return samples, fmt.sample_rate, fmt.nbits, None
 end
 
-function wavread(filename::String, opts::Options)
-    @defaults opts subrange=Any format="double"
+function wavread(filename::String; subrange=Any, format="double")
     io = open(filename, "r")
     finalizer(io, close)
-    @check_used opts
-    return wavread(io, opts)
+    return wavread(io, subrange, format)
 end
 
 # These are the MATLAB compatible signatures
-wavread(filename::String) = wavread(filename, @options)
-wavread(io::IO) = wavread(io, @options)
-wavread(filename::String, fmt::String) = wavread(filename, @options format=fmt)
-wavread(filename::String, N::Int) = wavread(filename, @options subrange=N)
-wavread(filename::String, N::Range1{Int}) = wavread(filename, @options subrange=N)
-wavread(filename::String, N::Int, fmt::String) = wavread(filename, @options subrange=N format=fmt)
-wavread(filename::String, N::Range1{Int}, fmt::String) = wavread(filename, @options subrange=N format=fmt)
+wavread(filename::String, fmt::String) = wavread(filename, format=fmt)
+wavread(filename::String, N::Int) = wavread(filename, subrange=N)
+wavread(filename::String, N::Range1{Int}) = wavread(filename, subrange=N)
+wavread(filename::String, N::Int, fmt::String) = wavread(filename, subrange=N, format=fmt)
+wavread(filename::String, N::Range1{Int}, fmt::String) = wavread(filename, subrange=N, format=fmt)
 
-function wavwrite(samples::Array, io::IO, opts::Options)
-    @defaults opts Fs=8000 nbits=16 compression=WAVE_FORMAT_PCM
+function wavwrite(samples::Array, io::IO; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
     fmt = WAVFormat()
     fmt.compression_code = compression
     fmt.nchannels = size(samples, 2)
@@ -441,28 +429,23 @@ function wavwrite(samples::Array, io::IO, opts::Options)
 
     # The file is not flushed unless I explicitly call it here
     flush(io)
-    @check_used opts
 end
 
-function wavwrite(samples::Array, filename::String, opts::Options)
-    @defaults opts Fs=8000 nbits=16 compression=WAVE_FORMAT_PCM
+function wavwrite(samples::Array, filename::String; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
     io = open(filename, "w")
     finalizer(io, close)
-    @check_used opts
-    return wavwrite(samples, io, opts)
+    return wavwrite(samples, io, Fs, nbits, compression)
 end
 
-wavwrite(y::Array, filename::String) = wavwrite(y, filename, @options)
-wavwrite(y::Array, io::IO) = wavwrite(y, io, @options)
-wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, @options Fs=f)
-wavwrite(y::Array, f::Real, N::Real, filename::String) = wavwrite(y, filename, @options Fs=f nbits=N)
+wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, Fs=f)
+wavwrite(y::Array, f::Real, N::Real, filename::String) = wavwrite(y, filename, Fs=f, nbits=N)
 
 # support for writing native arrays...
-wavwrite{T<:Integer}(y::Array{T}, io::IO) = wavwrite(y, io, @options nbits=sizeof(T)*8)
-wavwrite{T<:Integer}(y::Array{T}, filename::String) = wavwrite(y, filename, @options nbits=sizeof(T)*8)
-wavwrite(y::Array{Int32}, io::IO) = wavwrite(y, io, @options nbits=24)
-wavwrite(y::Array{Int32}, filename::String) = wavwrite(y, filename, @options nbits=24)
-wavwrite{T<:FloatingPoint}(y::Array{T}, io::IO) = wavwrite(y, io, @options nbits=sizeof(T)*8 compression=WAVE_FORMAT_IEEE_FLOAT)
-wavwrite{T<:FloatingPoint}(y::Array{T}, filename::String) = wavwrite(y, filename, @options nbits=sizeof(T)*8 compression=WAVE_FORMAT_IEEE_FLOAT)
+wavwrite{T<:Integer}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8)
+wavwrite{T<:Integer}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8)
+wavwrite(y::Array{Int32}, io::IO) = wavwrite(y, io, nbits=24)
+wavwrite(y::Array{Int32}, filename::String) = wavwrite(y, filename, nbits=24)
+wavwrite{T<:FloatingPoint}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+wavwrite{T<:FloatingPoint}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
 
 end # module
