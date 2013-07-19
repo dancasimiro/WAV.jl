@@ -383,7 +383,7 @@ end
 function wavread(filename::String; subrange=Any, format="double")
     io = open(filename, "r")
     finalizer(io, close)
-    return wavread(io, subrange, format)
+    wavread(io, subrange=subrange, format=format)
 end
 
 # These are the MATLAB compatible signatures
