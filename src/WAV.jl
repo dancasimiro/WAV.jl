@@ -426,9 +426,6 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=16, compression=WAVE_FO
     write(io, b"data")
     write_le(io, fmt.data_length) # Uint32
     write_data(io, fmt, ext, samples)
-
-    # The file is not flushed unless I explicitly call it here
-    flush(io)
 end
 
 function wavwrite(samples::Array, filename::String; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)

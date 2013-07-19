@@ -29,9 +29,8 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @assert max(in_data) <= 1.0
         @assert min(in_data) >= -1.0
     end
-    io = memio()
+    io = IOBuffer()
     WAV.wavwrite(in_data, io, Fs=fs, nbits=nbits, compression=WAV.WAVE_FORMAT_PCM)
-    flush(io)
     file_size = position(io)
 
     ## Check for the common header identifiers
@@ -90,9 +89,8 @@ end
 ## Test native encoding of 8 bits
 for nchans = (1,2,4)
     in_data_8 = reshape(typemin(Uint8):typemax(Uint8), int(256 / nchans), nchans)
-    io = memio()
+    io = IOBuffer()
     WAV.wavwrite(in_data_8, io)
-    flush(io)
 
     seek(io, 0)
     out_data_8, fs, nbits, extra = WAV.wavread(io, format="native")
@@ -105,9 +103,8 @@ end
 ## Test native encoding of 16 bits
 for nchans = (1,2,4)
     in_data_16 = reshape(typemin(Int16):typemax(Int16), int(65536 / nchans), nchans)
-    io = memio()
+    io = IOBuffer()
     WAV.wavwrite(in_data_16, io)
-    flush(io)
 
     seek(io, 0)
     out_data_16, fs, nbits, extra = WAV.wavread(io, format="native")
@@ -120,9 +117,8 @@ end
 ## Test native encoding of 24 bits
 for nchans = (1,2,4)
     in_data_24 = convert(Array{Int32}, reshape(-63:64, int(128 / nchans), nchans))
-    io = memio()
+    io = IOBuffer()
     WAV.wavwrite(in_data_24, io)
-    flush(io)
 
     seek(io, 0)
     out_data_24, fs, nbits, extra = WAV.wavread(io, format="native")
@@ -135,9 +131,8 @@ end
 ## Test encoding 32 bit values
 for nchans = (1,2,4)
     in_data_single = convert(Array{Float32}, reshape(linspace(-1.0, 1.0, 128), int(128 / nchans), nchans))
-    io = memio()
+    io = IOBuffer()
     WAV.wavwrite(in_data_single, io)
-    flush(io)
 
     seek(io, 0)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
@@ -151,9 +146,8 @@ end
 for nchans = (1,2,4)
     nsamps = int(128 / nchans)
     in_data_single = convert(Array{Float32}, reshape(-63:64, nsamps, nchans))
-    io = memio()
+    io = IOBuffer()
     WAV.wavwrite(in_data_single, io)
-    flush(io)
 
     seek(io, 0)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
