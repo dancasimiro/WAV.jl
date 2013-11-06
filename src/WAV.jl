@@ -431,7 +431,7 @@ end
 function wavwrite(samples::Array, filename::String; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
     io = open(filename, "w")
     finalizer(io, close)
-    return wavwrite(samples, io, Fs, nbits, compression)
+    return wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression)
 end
 
 wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, Fs=f)
