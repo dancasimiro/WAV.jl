@@ -11,7 +11,7 @@ Installation
 Getting Started
 ---------------
 
-WAV provides `wavread` and `wavwrite` commands to read and write WAV files. First, you need to load the WAV package by typing `using WAV`. You can copy an existing file with the following
+WAV provides `wavread` and `wavwrite` commands to read and write WAV files. Here is an example to get you started. It generates some data, writes it to a file and then reads the data back.
 
 ```jlcon
 julia> using WAV
