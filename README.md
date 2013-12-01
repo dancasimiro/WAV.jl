@@ -83,25 +83,21 @@ file. "Native" WAVE files are written when integers are passed into
 wavwrite. This means that the literal values are written into the
 file. The input ranges are as follows for integer samples.
 
-======       ===========     ======================   =============
-N Bits       y Data Type     y Data Range             Output Format
-======       ===========     ======================   =============
-8            uint8           0 <= y <= 255            uint8
-16           int16           –32768 <= y <= +32767    int16
-24           int32           –2^23 <= y <= 2^23 – 1   int32
-======       ===========     ======================   =============
+| N Bits | y Data Type | y Data Range           | Output Format |
+|--------|-------------|------------------------|---------------|
+| 8      | uint8       | 0 <= y <= 255          | uint8         |
+| 16     | int16       | –32768 <= y <= +32767  | int16         |
+| 24     | int32       | –2^23 <= y <= 2^23 – 1 | int32         |
 
 If samples contains floating point values, the input data ranges
 are the following.
 
-======    ================   =================   =============
-N Bits    y Data Type        y Data Range        Output Format
-======    ================   =================   =============
-8         single or double   –1.0 <= y < +1.0    uint8
-16        single or double   –1.0 <= y < +1.0    int16
-24        single or double   –1.0 <= y < +1.0    int32
-32        single or double   –1.0 <= y <= +1.0   single
-======    ================   =================   =============
+| N Bits | y Data Type      | y Data Range       | Output Format |
+|--------|------------------|--------------------|---------------|
+| 8      | single or double |  –1.0 <= y < +1.0  | uint8         |
+| 16     | single or double |  –1.0 <= y < +1.0  | int16         |
+| 24     | single or double |  –1.0 <= y < +1.0  | int32         |
+| 32     | single or double |  –1.0 <= y <= +1.0 | single        |
 
 The following functions are also defined to make this function
 compatible with MATLAB:
