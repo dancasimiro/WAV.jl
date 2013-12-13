@@ -27,8 +27,10 @@ wavread
 This function reads the samples from a WAV file. The samples are converted to floating
 point values in the range from -1.0 to 1.0 by default.
 
-> function wavread(io::IO; subrange=Any, format="double")
-> function wavread(filename::String; subrange=Any, format="double")
+```julia
+function wavread(io::IO; subrange=Any, format="double")
+function wavread(filename::String; subrange=Any, format="double")
+```
 
 The available options, and the default values, are:
 
@@ -50,11 +52,13 @@ The returned values are:
 
    The following functions are also defined to make this function compatible with MATLAB:
 
-> wavread(filename::String, fmt::String) = wavread(filename, format=fmt)
-> wavread(filename::String, N::Int) = wavread(filename, subrange=N)
-> wavread(filename::String, N::Range1{Int}) = wavread(filename, subrange=N)
-> wavread(filename::String, N::Int, fmt::String) = wavread(filename, subrange=N, format=fmt)
-> wavread(filename::String, N::Range1{Int}, fmt::String) = wavread(filename, subrange=N, format=fmt)
+```julia
+wavread(filename::String, fmt::String) = wavread(filename, format=fmt)
+wavread(filename::String, N::Int) = wavread(filename, subrange=N)
+wavread(filename::String, N::Range1{Int}) = wavread(filename, subrange=N)
+wavread(filename::String, N::Int, fmt::String) = wavread(filename, subrange=N, format=fmt)
+wavread(filename::String, N::Range1{Int}, fmt::String) = wavread(filename, subrange=N, format=fmt)
+```
 
 wavwrite
 --------
@@ -68,8 +72,10 @@ channel. Stereo files should contain two columns. The options are
 passed via an ``Options`` object (see the :ref:`options page
 <options-module>`).
 
-> function wavwrite(samples::Array, io::IO; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
-> function wavwrite(samples::Array, filename::String; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
+```julia
+function wavwrite(samples::Array, io::IO; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
+function wavwrite(samples::Array, filename::String; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
+```
 
 The available options, and the default values, are:
 
@@ -102,11 +108,14 @@ are the following.
 The following functions are also defined to make this function
 compatible with MATLAB:
 
-> wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, Fs=f)
-> wavwrite(y::Array, f::Real, N::Real, filename::String) = wavwrite(y, filename, Fs=f, nbits=N)
-> wavwrite{T<:Integer}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8)
-> wavwrite{T<:Integer}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8)
-> wavwrite(y::Array{Int32}, io::IO) = wavwrite(y, io, nbits=24)
-> wavwrite(y::Array{Int32}, filename::String) = wavwrite(y, filename, nbits=24)
-> wavwrite{T<:FloatingPoint}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
-> wavwrite{T<:FloatingPoint}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+```julia
+wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, Fs=f)
+wavwrite(y::Array, f::Real, N::Real, filename::String) = wavwrite(y, filename, Fs=f, nbits=N)
+wavwrite{T<:Integer}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8)
+wavwrite{T<:Integer}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8)
+wavwrite(y::Array{Int32}, io::IO) = wavwrite(y, io, nbits=24)
+wavwrite(y::Array{Int32}, filename::String) = wavwrite(y, filename, nbits=24)
+wavwrite{T<:FloatingPoint}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+wavwrite{T<:FloatingPoint}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+```
+
