@@ -200,13 +200,13 @@ end
 
 ieee_float_container_type(nbits::Unsigned) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
-function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
-    const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
-    samples = Array(pcm_container_type(fmt.nbits), nblocks, fmt.nchannels)
+function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1)
+    samples = Array(pcm_container_type(fmt.nbits), length(subrange), fmt.nchannels)
     const nbytes = iceil(fmt.nbits / 8)
     const bitshift::Array{Uint} = linspace(0, 64, 9)
     const mask = unsigned(1) << (fmt.nbits - 1)
     const signextend_mask = ~unsigned(0) << fmt.nbits
+    skip(io, uint((first(subrange) - 1) * nbytes * fmt.nchannels))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
             raw_sample = read(io, Uint8, nbytes)
@@ -225,16 +225,27 @@ function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
     samples
 end
 
-function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat)
+function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
     const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
+    read_pcm_samples(io, chunk_size, fmt, 1:nblocks)
+end
+
+function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1)
     const floatType = ieee_float_container_type(fmt.nbits)
+    const nblocks = length(subrange)
     samples = Array(floatType, nblocks, fmt.nchannels)
+    skip(io, uint((first(subrange) - 1) * (fmt.nbits / 8) * fmt.nchannels))
     for i = 1:nblocks
         for j = 1:fmt.nchannels
             samples[i, j] = read_le(io, floatType)
         end
     end
     samples
+end
+
+function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
+    const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
+    read_ieee_float_samples(io, chunk_size, fmt, 1:nblocks)
 end
 
 # PCM data is two's-complement except for resolutions of 1-8 bits, which are represented as offset binary.
@@ -245,7 +256,7 @@ convert_pcm_to_double(samples::Array{Int8}, nbits::Integer) = error("WAV files u
 # support every bit width from 9 to 64 bits
 convert_pcm_to_double{T<:Signed}(samples::Array{T}, nbits::Integer) = convert(Array{Float64}, samples) / (2^(nbits - 1) - 1)
 
-function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, format::String)
+function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, format::String, subrange::Any)
     # "format" is the format of values, while "fmt" is the WAV file level format
     samples = None
     convert_to_double = x -> convert(Array{Float64}, x)
@@ -253,19 +264,19 @@ function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, format::String)
         ext_fmt = WAVFormatExtension(fmt.extra_bytes)
         if ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_PCM
             fmt.nbits = ext_fmt.valid_bits_per_sample
-            samples = read_pcm_samples(io, chunk_size, fmt)
+            samples = read_pcm_samples(io, chunk_size, fmt, subrange)
             convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
             fmt.nbits = ext_fmt.valid_bits_per_sample
-            samples = read_ieee_float_samples(io, chunk_size, fmt)
+            samples = read_ieee_float_samples(io, chunk_size, fmt, subrange)
         else
             error("$ext_fmt -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
         end
     elseif fmt.compression_code == WAVE_FORMAT_PCM
-        samples = read_pcm_samples(io, chunk_size, fmt)
+        samples = read_pcm_samples(io, chunk_size, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
     elseif fmt.compression_code == WAVE_FORMAT_IEEE_FLOAT
-        samples = read_ieee_float_samples(io, chunk_size, fmt)
+        samples = read_ieee_float_samples(io, chunk_size, fmt, subrange)
     else
         error("$(fmt.compression_code) is an unsupported compression code!")
     end
@@ -340,13 +351,11 @@ function write_data(io::IO, fmt::WAVFormat, ext_fmt::WAVFormatExtension, samples
     end
 end
 
-get_data_range(samples::Array, subrange) = samples
-get_data_range(samples::Array, subrange::Int) = samples[1:subrange, :]
-get_data_range(samples::Array, subrange::Real) = samples[1:convert(Int, subrange), :]
-get_data_range(samples::Array, subrange::Range1{Int}) = samples[subrange, :]
-get_data_range(samples::Array, subrange::Range1{Real}) = samples[convert(Range1{Int}, subrange), :]
+make_range(subrange) = subrange
+make_range(subrange::Number) = 1:convert(Int, subrange)
+make_range(subrange::Range1) = convert(Range1{Int}, subrange)
 
-function wavread(io::IO; subrange=Any, format="double")
+function wavread(io::IO; subrange=None, format="double")
     chunk_size = read_header(io)
     fmt = WAVFormat()
     samples = Array(Float64)
@@ -369,14 +378,13 @@ function wavread(io::IO; subrange=Any, format="double")
             if format == "size"
                 return int(subchunk_size / fmt.block_align), int(fmt.nchannels)
             end
-            samples = read_data(io, subchunk_size, fmt, format)
+            samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
             # return unknown sub-chunks?
             # Note: Ignoring unknown sub chunks for now
             skip(io, subchunk_size)
         end
     end
-    samples = get_data_range(samples, subrange)
     return samples, fmt.sample_rate, fmt.nbits, None
 end
 
@@ -389,9 +397,9 @@ end
 # These are the MATLAB compatible signatures
 wavread(filename::String, fmt::String) = wavread(filename, format=fmt)
 wavread(filename::String, N::Int) = wavread(filename, subrange=N)
-wavread(filename::String, N::Range1{Int}) = wavread(filename, subrange=N)
+wavread(filename::String, N::Range1) = wavread(filename, subrange=N)
 wavread(filename::String, N::Int, fmt::String) = wavread(filename, subrange=N, format=fmt)
-wavread(filename::String, N::Range1{Int}, fmt::String) = wavread(filename, subrange=N, format=fmt)
+wavread(filename::String, N::Range1, fmt::String) = wavread(filename, subrange=N, format=fmt)
 
 function wavwrite(samples::Array, io::IO; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
     fmt = WAVFormat()
