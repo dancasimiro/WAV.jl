@@ -88,7 +88,7 @@ end
 
 ## Test native encoding of 8 bits
 for nchans = (1,2,4)
-    in_data_8 = reshape(typemin(Uint8):typemax(Uint8), int(256 / nchans), nchans)
+    in_data_8 = uint8(reshape(int(typemin(Uint8):typemax(Uint8)), (int(256 / nchans), nchans)))
     io = IOBuffer()
     WAV.wavwrite(in_data_8, io)
 
@@ -102,7 +102,7 @@ end
 
 ## Test native encoding of 16 bits
 for nchans = (1,2,4)
-    in_data_16 = reshape(typemin(Int16):typemax(Int16), int(65536 / nchans), nchans)
+    in_data_16 = int16(reshape(int(typemin(Int16):typemax(Int16)), (int(65536 / nchans), nchans)))
     io = IOBuffer()
     WAV.wavwrite(in_data_16, io)
 
