@@ -110,7 +110,7 @@ function WAVFormatExtension(bytes::Array{Uint8})
     # little endian...
     valid_bits_per_sample = (uint16(bytes[2]) << 8) | uint16(bytes[1])
     channel_mask = (uint32(bytes[6]) << 24) | (uint32(bytes[5]) << 16) | (uint32(bytes[4]) << 8) | uint32(bytes[3])
-    sub_format = bytes[7:]
+    sub_format = bytes[7:end]
     return WAVFormatExtension(valid_bits_per_sample, channel_mask, sub_format)
 end
 
