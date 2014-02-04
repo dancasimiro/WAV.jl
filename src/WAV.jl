@@ -426,8 +426,10 @@ function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, format::String, s
         samples = read_ieee_float_samples(io, chunk_size, fmt, subrange)
     elseif fmt.compression_code == WAVE_FORMAT_MULAW
         samples = read_mulaw_samples(io, chunk_size, fmt)
+        convert_to_double = x -> convert_pcm_to_double(x, 16)
     elseif fmt.compression_code == WAVE_FORMAT_ALAW
         samples = read_alaw_samples(io, chunk_size, fmt)
+        convert_to_double = x -> convert_pcm_to_double(x, 16)
     else
         error("$(fmt.compression_code) is an unsupported compression code!")
     end
