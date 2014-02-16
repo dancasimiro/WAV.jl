@@ -156,3 +156,70 @@ for nchans = (1,2,4)
     @assert extra == None
     @assert [clamp(in_data_single[i, j], float32(-1), float32(1)) for i = 1:nsamps, j = 1:nchans] == out_data_single
 end
+
+### Test A-Law and Mu-Law
+#@assert WAV.compress_sample_alaw(int16(10)) == (uint8(int16(10) >> 4))
+for nbits = (8, 16), nsamples = convert(Array{Int}, [0, logspace(1, 4, 4)]), nchans = 1:2, fmt=(WAV.WAVE_FORMAT_ALAW, WAV.WAVE_FORMAT_MULAW)
+    const fs = 8000.0
+    const tol = 2.0 / (2.0^6)
+    in_data = rand(nsamples, nchans)
+    if nsamples > 0
+        @assert maximum(in_data) <= 1.0
+        @assert minimum(in_data) >= -1.0
+    end
+    io = IOBuffer()
+    WAV.wavwrite(in_data, io, Fs=fs, nbits=nbits, compression=fmt)
+    file_size = position(io)
+
+    ## Check for the common header identifiers
+    seek(io, 0)
+    @assert read(io, Uint8, 4) == b"RIFF"
+    @assert WAV.read_le(io, Uint32) == file_size - 8
+    @assert read(io, Uint8, 4) == b"WAVE"
+
+    ## Check that wavread works on the wavwrite produced memory
+    seek(io, 0)
+    sz = WAV.wavread(io, format="size")
+    @assert sz == (nsamples, nchans)
+
+    seek(io, 0)
+    out_data, out_fs, out_nbits, out_extra = WAV.wavread(io)
+    @assert length(out_data) == nsamples * nchans
+    @assert size(out_data, 1) == nsamples
+    @assert size(out_data, 2) == nchans
+    @assert typeof(out_data) == Array{Float64, 2}
+    @assert out_fs == fs
+    @assert out_nbits == 8
+    @assert out_extra == None
+    if nsamples > 0
+        @assert absdiff(out_data, in_data) < tol
+    end
+
+    ## test the "subrange" option.
+    if nsamples > 0
+        seek(io, 0)
+        # Don't convert to Int, test if passing a float (nsamples/2) behaves as expected
+        subsamples = min(10, int(nsamples / 2))
+        out_data, out_fs, out_nbits, out_extra = WAV.wavread(io, subrange=subsamples)
+        @assert length(out_data) == subsamples * nchans
+        @assert size(out_data, 1) == subsamples
+        @assert size(out_data, 2) == nchans
+        @assert typeof(out_data) == Array{Float64, 2}
+        @assert out_fs == fs
+        @assert out_nbits == 8
+        @assert out_extra == None
+        @assert absdiff(out_data, in_data[1:int(subsamples), :]) < tol
+
+        seek(io, 0)
+        sr = convert(Int, min(5, int(nsamples / 2))):convert(Int, min(23, nsamples - 1))
+        out_data, out_fs, out_nbits, out_extra = WAV.wavread(io, subrange=sr)
+        @assert length(out_data) == length(sr) * nchans
+        @assert size(out_data, 1) == length(sr)
+        @assert size(out_data, 2) == nchans
+        @assert typeof(out_data) == Array{Float64, 2}
+        @assert out_fs == fs
+        @assert out_nbits == 8
+        @assert out_extra == None
+        @assert absdiff(out_data, in_data[sr, :]) < tol
+    end
+end
