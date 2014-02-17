@@ -424,20 +424,6 @@ function compress_sample_mulaw(sample::Int16)
     return compressedByte
 end
 
-function write_mulaw_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T})
-    for i = 1:size(samples, 1)
-        for j = 1:size(samples, 2)
-            const compressedByte::Uint8 = compress_sample_mulaw(samples[i, j])
-            write_le(io, compressedByte)
-        end
-    end
-end
-
-function write_mulaw_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Array{T})
-    samples = convert(Array{Int16}, round(samples * typemax(Int16)))
-    write_mulaw_samples(io, fmt, samples)
-end
-
 function compress_sample_alaw(sample::Int16)
     const ALawCompressTable::Array{Uint8} =
     [
@@ -461,12 +447,7 @@ function compress_sample_alaw(sample::Int16)
     @assert length(ALawCompressTable) == 128
     const cBias::Int16 = 0x84
     const cClip::Int16 = 32635
-
-    if sample == -32768
-        sample = -32767
-    end
-
-    sign::Int = ((~sample >>> 8) & 0x80)
+    const sign::Int = ((~sample >>> 8) & 0x80)
     if sign == 0
         sample = -sample
     end
@@ -484,18 +465,19 @@ function compress_sample_alaw(sample::Int16)
     compressedByte $= (sign $ 0x55)
 end
 
-function write_alaw_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T})
+
+function write_companded_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}, compander::Function)
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
-            const compressedByte::Uint8 = compress_sample_alaw(samples[i, j])
+            const compressedByte::Uint8 = compander(samples[i, j])
             write_le(io, compressedByte)
         end
     end
 end
 
-function write_alaw_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Array{T})
+function write_companded_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Array{T}, compander::Function)
     samples = convert(Array{Int16}, round(samples * typemax(Int16)))
-    write_alaw_samples(io, fmt, samples)
+    write_companded_samples(io, fmt, samples, compander)
 end
 
 function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
@@ -608,10 +590,10 @@ function write_data(io::IO, fmt::WAVFormat, ext_fmt::WAVFormatExtension, samples
             return write_ieee_float_samples(io, fmt, samples)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
             fmt.nbits = 8
-            return write_alaw_samples(io, fmt, samples)
+            return write_companded_samples(io, fmt, samples, compress_sample_alaw)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
             fmt.nbits = 8
-            return write_mulaw_samples(io, fmt, samples)
+            return write_companded_samples(io, fmt, samples, compress_sample_mulaw)
         else
             error("$ext_fmt -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
         end
@@ -620,9 +602,9 @@ function write_data(io::IO, fmt::WAVFormat, ext_fmt::WAVFormatExtension, samples
     elseif fmt.compression_code == WAVE_FORMAT_IEEE_FLOAT
         return write_ieee_float_samples(io, fmt, samples)
     elseif fmt.compression_code == WAVE_FORMAT_MULAW
-        return write_mulaw_samples(io, fmt, samples)
+        return write_companded_samples(io, fmt, samples, compress_sample_mulaw)
     elseif fmt.compression_code == WAVE_FORMAT_ALAW
-        return write_alaw_samples(io, fmt, samples)
+        return write_companded_samples(io, fmt, samples, compress_sample_alaw)
     else
         error("$(fmt.compression_code) is an unsupported compression code.")
     end
