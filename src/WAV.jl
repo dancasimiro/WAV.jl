@@ -681,16 +681,35 @@ wavread(filename::String, N::Range1) = wavread(filename, subrange=N)
 wavread(filename::String, N::Int, fmt::String) = wavread(filename, subrange=N, format=fmt)
 wavread(filename::String, N::Range1, fmt::String) = wavread(filename, subrange=N, format=fmt)
 
-function wavwrite(samples::Array, io::IO; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
+get_default_compression{T<:Integer}(samples::Array{T}) = WAVE_FORMAT_PCM
+get_default_compression{T<:FloatingPoint}(samples::Array{T}) = WAVE_FORMAT_IEEE_FLOAT
+get_default_pcm_precision(samples::Array{Uint8}) = 8
+get_default_pcm_precision(samples::Array{Int16}) = 16
+get_default_pcm_precision(samples) = 24
+
+function get_default_precision(samples, compression)
+    if compression == WAVE_FORMAT_ALAW || compression == WAVE_FORMAT_MULAW
+        return 8
+    elseif compression == WAVE_FORMAT_IEEE_FLOAT
+        return 32
+    end
+    get_default_pcm_precision(samples)
+end
+
+function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
+    if compression == 0
+        compression = get_default_compression(samples)
+    elseif compression == WAVE_FORMAT_ALAW || compression == WAVE_FORMAT_MULAW
+        nbits = 8
+    end
+    if nbits == 0
+        nbits = get_default_precision(samples, compression)
+    end
     fmt = WAVFormat()
     fmt.compression_code = compression
     fmt.nchannels = size(samples, 2)
     fmt.sample_rate = Fs
-    if compression == WAVE_FORMAT_ALAW || compression == WAVE_FORMAT_MULAW
-        fmt.nbits = nbits = 8
-    else
-        fmt.nbits = iceil(nbits / 8) * 8
-    end
+    fmt.nbits = iceil(nbits / 8) * 8
     fmt.block_align = fmt.nbits / 8 * fmt.nchannels
     fmt.bps = fmt.sample_rate * fmt.block_align
     fmt.data_length = size(samples, 1) * fmt.block_align
@@ -724,7 +743,7 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=16, compression=WAVE_FO
     write_data(io, fmt, ext, samples)
 end
 
-function wavwrite(samples::Array, filename::String; Fs=8000, nbits=16, compression=WAVE_FORMAT_PCM)
+function wavwrite(samples::Array, filename::String; Fs=8000, nbits=0, compression=0)
     io = open(filename, "w")
     finalizer(io, close)
     const result = wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression)

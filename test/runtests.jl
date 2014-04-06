@@ -17,6 +17,50 @@ function reldiff{T<:Real}(current::AbstractArray{T}, target::AbstractArray{T})
     maximum([reldiff(current[i], target[i]) for i in 1:numel(target)])
 end
 
+## example from README, modified to use an IO buffer
+let
+    x = [0:7999]
+    y = sin(2 * pi * x / 8000)
+    io = IOBuffer()
+    WAV.wavwrite(y, io, Fs=8000)
+    seek(io, 0)
+    y, Fs = WAV.wavread(io)
+end
+
+## default arguments, GitHub Issue #10
+let
+    tmp=rand(Float32,(10,2))
+    io = IOBuffer()
+    WAV.wavwrite(tmp, io; nbits=32)
+    seek(io, 0)
+    y, fs, nbits, extra = WAV.wavread(io; format="native")
+    @assert typeof(y) == Array{Float32, 2}
+    @assert fs == 8000.0
+    @assert nbits == 32
+end
+
+let
+    tmp=rand(Float64,(10,2))
+    io = IOBuffer()
+    WAV.wavwrite(tmp, io; nbits=64)
+    seek(io, 0)
+    y, fs, nbits, extra = WAV.wavread(io; format="native")
+    @assert typeof(y) == Array{Float64, 2}
+    @assert fs == 8000.0
+    @assert nbits == 64
+end
+
+let
+    tmp=rand(Float32,(10,2))
+    io = IOBuffer()
+    WAV.wavwrite(tmp, io; compression=WAV.WAVE_FORMAT_IEEE_FLOAT)
+    seek(io, 0)
+    y, fs, nbits, extra = WAV.wavread(io; format="native")
+    @assert typeof(y) == Array{Float32, 2}
+    @assert fs == 8000.0
+    @assert nbits == 32
+end
+
 ## Test wavread and wavwrite
 ## Generate some wav files for writing and reading
 for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,24,32,64), nsamples = convert(Array{Int}, [0, logspace(1, 4, 4)]), nchans = 1:4
