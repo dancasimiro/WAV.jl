@@ -219,6 +219,9 @@ ieee_float_container_type(nbits::Unsigned) = (nbits == 32 ? Float32 : (nbits == 
 
 function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1)
     samples = Array(pcm_container_type(fmt.nbits), length(subrange), fmt.nchannels)
+    if isempty(subrange)
+        return samples
+    end
     const nbytes = iceil(fmt.nbits / 8)
     const bitshift::Array{Uint} = linspace(0, 64, 9)
     const mask = unsigned(1) << (fmt.nbits - 1)
@@ -242,13 +245,20 @@ function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange
     samples
 end
 
+# "subrange" is a placeholder for None in this method
 function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
     const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
+    if nblocks == 0
+        return Array(pcm_container_type(fmt.nbits), 0, fmt.nchannels)
+    end
     read_pcm_samples(io, chunk_size, fmt, 1:nblocks)
 end
 
 function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1)
     const floatType = ieee_float_container_type(fmt.nbits)
+    if isempty(subrange)
+        return Array(floatType, nblocks, fmt.nchannels)
+    end
     const nblocks = length(subrange)
     samples = Array(floatType, nblocks, fmt.nchannels)
     skip(io, uint((first(subrange) - 1) * (fmt.nbits / 8) * fmt.nchannels))
@@ -262,10 +272,16 @@ end
 
 function read_companded_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange, table::Array{Int16})
     const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
+    if nblocks == 0
+        return Array(Int16, 0, fmt.nchannels)
+    end
     read_companded_samples(io, chunk_size, fmt, 1:nblocks, table)
 end
 
 function read_companded_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1, table::Array{Int16})
+    if isempty(subrange)
+        return Array(Int16, 0, fmt.nchannels)
+    end
     const nblocks = length(subrange)
     samples = Array(Int16, nblocks, fmt.nchannels)
     skip(io, uint((first(subrange) - 1) * fmt.nchannels))
@@ -482,6 +498,9 @@ end
 
 function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
     const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
+    if nblocks == 0
+        return Array(ieee_float_container_type(fmt.nbits), 0, fmt.nchannels)
+    end
     read_ieee_float_samples(io, chunk_size, fmt, 1:nblocks)
 end
 
