@@ -13,5 +13,6 @@ before_install:
   - sudo apt-get update -qq -y
   - sudo apt-get install libpcre3-dev julia -y
 script:
-  - julia -e 'versioninfo(); Pkg.init(); Pkg.clone(pwd())'
+  - julia -e 'Pkg.init(); run(`ln -s $(pwd()) $(Pkg.dir("WAV"))`); Pkg.pin("WAV"); Pkg.resolve()'
+  - julia -e 'using WAV; @assert isdefined(:WAV); @assert typeof(WAV) === Module'
   - julia ./test/runtests.jl
