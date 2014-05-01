@@ -25,6 +25,10 @@ let
     WAV.wavwrite(y, io, Fs=8000)
     seek(io, 0)
     y, Fs = WAV.wavread(io)
+    y = cos(2 * pi * x / 8000)
+    WAV.wavappend(y, io)
+    seek(io, 0)
+    y, Fs = WAV.wavread(io)
 end
 
 ## default arguments, GitHub Issue #10
@@ -129,6 +133,18 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @assert absdiff(out_data, in_data[sr, :]) < tol
     end
 end
+
+## Test wavappend
+x0=rand(2,3)
+x1=rand(3,3)
+x2=rand(4,3)
+io = IOBuffer()
+WAV.wavwrite(x0, io)
+WAV.wavappend(x1, io)
+WAV.wavappend(x2, io)
+seek(io, 0)
+x, fs, nbits, extra = WAV.wavread(io)
+@assert x == [x0; x1; x2]
 
 ## Test native encoding of 8 bits
 for nchans = (1,2,4)
