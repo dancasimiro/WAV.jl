@@ -128,5 +128,6 @@ wavappend
 Append samples to an existing WAV file.  All parameters (data type and range, output format, number of bits, number of channels, etc.) are assumed to match.
 
 ```julia
+function wavappend(samples::Array, io::IO)
 function wavappend(samples::Array, filename::String)
 ```

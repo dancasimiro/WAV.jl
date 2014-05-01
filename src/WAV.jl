@@ -753,10 +753,7 @@ function wavwrite(samples::Array, filename::String; Fs=8000, nbits=0, compressio
     return result
 end
 
-function wavappend(samples::Array, filename::String)
-    io = open(filename, true,true,false,false,true)  # r, w, & a
-    finalizer(io, close)
-
+function wavappend(samples::Array, io::IO)
     seekstart(io)
     chunk_size = read_header(io)
     subchunk_id = read(io, Uint8, 4)
@@ -782,8 +779,13 @@ function wavappend(samples::Array, filename::String)
     write_le(io,uint32(subchunk_size + fmt.data_length))
 
     seekend(io)
-    const result = write_data(io, fmt, ext, samples)
+    write_data(io, fmt, ext, samples)
+end
 
+function wavappend(samples::Array, filename::String)
+    io = open(filename, true,true,false,false,true)  # r, w, & a
+    finalizer(io, close)
+    const result = wavappend(samples,io)
     close(io)
     return result
 end
