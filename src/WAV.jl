@@ -1,6 +1,6 @@
 # -*- mode: julia; -*-
 module WAV
-export wavread, wavwrite, wavplay, WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
+export wavread, wavwrite, wavappend, wavplay, WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
 import Base.unbox, Base.box
 
 @linux? include("wavplay.jl") : (wavplay(args...) = warn("wavplay is not currently implemented on $OS_NAME"))
@@ -749,6 +749,41 @@ function wavwrite(samples::Array, filename::String; Fs=8000, nbits=0, compressio
     io = open(filename, "w")
     finalizer(io, close)
     const result = wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression)
+    close(io)
+    return result
+end
+
+function wavappend(samples::Array, filename::String)
+    io = open(filename, true,true,false,false,true)  # r, w, & a
+    finalizer(io, close)
+
+    seekstart(io)
+    chunk_size = read_header(io)
+    subchunk_id = read(io, Uint8, 4)
+    subchunk_size = read_le(io, Uint32)
+    if subchunk_id != b"fmt "
+        error("First chunk is not the format")
+    end
+    fmt = read_format(io, subchunk_size)
+    ext = WAVFormatExtension(fmt.extra_bytes)
+
+    if fmt.nchannels != size(samples,2)
+        error("Number of channels do not match")
+    end
+
+    fmt.data_length = size(samples, 1) * fmt.block_align
+
+    seek(io,4)
+    write_le(io,uint32(chunk_size + fmt.data_length))
+
+    seek(io,64)
+    subchunk_size = read_le(io, Uint32)
+    seek(io,64)
+    write_le(io,uint32(subchunk_size + fmt.data_length))
+
+    seekend(io)
+    const result = write_data(io, fmt, ext, samples)
+
     close(io)
     return result
 end
