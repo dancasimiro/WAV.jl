@@ -11,13 +11,16 @@ Installation
 Getting Started
 ---------------
 
-WAV provides `wavread` and `wavwrite` commands to read and write WAV files. Here is an example to get you started. It generates some data, writes it to a file and then reads the data back.
+WAV provides `wavread`, `wavwrite`, and `wavappend` commands to read, write, and append WAV files. Here is an example to get you started. It generates some data, writes it to a file and then reads the data back.
 
 ```jlcon
 julia> using WAV
 julia> x = [0:7999]
 julia> y = sin(2 * pi * x / 8000)
 julia> wavwrite(y, "example.wav", Fs=8000)
+julia> y, Fs = wavread("example.wav")
+julia> y = cos(2 * pi * x / 8000)
+julia> wavappend(y, "example.wav")
 julia> y, Fs = wavread("example.wav")
 ```
 
@@ -119,3 +122,12 @@ wavwrite{T<:FloatingPoint}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T
 wavwrite{T<:FloatingPoint}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
 ```
 
+wavappend
+---------
+
+Append samples to an existing WAV file.  All parameters (data type and range, output format, number of bits, number of channels, etc.) are assumed to match.
+
+```julia
+function wavappend(samples::Array, io::IO)
+function wavappend(samples::Array, filename::String)
+```
