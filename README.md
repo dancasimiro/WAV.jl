@@ -1,6 +1,8 @@
 WAV.jl
 ======
 
+[![Build Status](https://travis-ci.org/dancasimiro/WAV.jl.png)](https://travis-ci.org/dancasimiro/WAV.jl)
+
 This is a Julia package to read and write the WAV audio file format.
 
 Installation
