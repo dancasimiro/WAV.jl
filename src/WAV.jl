@@ -137,7 +137,7 @@ function read_header(io::IO)
     # check if the given file has a valid RIFF header
     riff = read(io, Uint8, 4)
     if riff !=  b"RIFF"
-        error("$filename is not a valid WAV file: The RIFF header is invalid")
+        error("Invalid WAV file: The RIFF header is invalid")
     end
 
     chunk_size = read_le(io, Uint32)
@@ -145,7 +145,7 @@ function read_header(io::IO)
     # check if this is a WAV file
     format = read(io, Uint8, 4)
     if format != b"WAVE"
-        error("$filename is not a valid WAV file: the format is not WAVE")
+        error("Invalid WAV file: the format is not WAVE")
     end
     return chunk_size
 end
@@ -259,7 +259,7 @@ end
 function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1)
     const floatType = ieee_float_container_type(fmt.nbits)
     if isempty(subrange)
-        return Array(floatType, nblocks, fmt.nchannels)
+        return Array(floatType, 0, fmt.nchannels)
     end
     const nblocks = length(subrange)
     samples = Array(floatType, nblocks, fmt.nchannels)
