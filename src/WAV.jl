@@ -428,7 +428,7 @@ function compress_sample_mulaw(sample::Int16)
     const cBias::Int16 = 0x84
     const cClip::Int16 = 32635
 
-    const sign = (sample >>> 8) & 0x80
+    const sign::Uint8 = (sample >>> 8) & 0x80
     if sign != 0
         sample = -sample
     end
@@ -437,9 +437,8 @@ function compress_sample_mulaw(sample::Int16)
     end
     sample = sample + cBias
     const exponent::Uint8 = MuLawCompressTable[(sample >>> 7) + 1]
-    const mantissa = (sample >> (exponent+3)) & 0x0F
-    const compressedByte = ~ (sign | (exponent << 4) | mantissa)
-    return compressedByte
+    const mantissa::Uint8 = (sample >> (exponent+3)) & 0x0F
+    ~ (sign | (exponent << 4) | mantissa)
 end
 
 function compress_sample_alaw(sample::Int16)
@@ -567,7 +566,7 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
             my_sample = clamp(samples[i, j], minval, maxval)
             # shift my_sample into the N most significant bits
             my_sample <<= nbytes * 8 - fmt.nbits
-            mask = uint64(0xff)
+            mask = convert(typeof(my_sample), 0xff)
             for k = 1:nbytes
                 write_le(io, uint8((my_sample & mask) >> bitshift[k]))
                 mask <<= 8
