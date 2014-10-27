@@ -1,4 +1,4 @@
-
+# -*- mode: julia; -*-
 immutable PulseSample
     format::Int32
     rate::Uint32
