@@ -2,6 +2,19 @@
 
 const kNumberBuffers = 3
 
+# Apple Core Audio Type
+immutable AudioStreamBasicDescription
+    mSampleRate::Float64
+    mFormatID::Uint32
+    mFormatFlags::Uint32
+    mBytesPerPacket::Uint32
+    mFramesPerPacket::Uint32
+    mBytesPerFrame::Uint32
+    mChannelsPerFrame::Uint32
+    mBitsPerChannel::Uint32
+    mReserved::Uint32
+end
+
 immutable AudioQueueData
     samples
 #    AudioStreamBasicDescription   mDataFormat;                    // 2
@@ -16,7 +29,7 @@ immutable AudioQueueData
 end
 
 #aq::AudioQueueRef, buffer::AudioQueueBufferRef
-function playcallback(data_::Ptr{AudioQueueData}, aq, buffer)
+function playCallback(data_::Ptr{AudioQueueData}, aq::Ptr{Void}, buffer::Ptr{Void})
     data = unsafe_load(data_)
 
     """
@@ -49,11 +62,23 @@ function playcallback(data_::Ptr{AudioQueueData}, aq, buffer)
         pAqData->mIsRunning = false; 
     }
         """
-    nothing
 end
+
+typealias OSStatus Int32
 
 function wavplay(data, Fs, args...)
     warn("wavplay is not ready yet")
+
+    dataFormat = 1
+    data = AudioQueueData(None)
+    runLoop = None
+    runLoopModes = None
+    queue = None
+    const outputCallback_c = cfunction(playCallback, Void, (Ptr{Void}, Ptr{Void}, Ptr{Void}))
+    result = ccall((:AudioQueueNewOutput, "/System/Library/Frameworks/AudioToolbox.framework/Versions/A/AudioToolbox"),
+    OSStatus,
+    (Ptr{AudioStreamBasicDescription}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}, Uint32, Ptr{Void}),
+    dataFormat, outputCallback_c, data, runLoop, runLoopModes, 0, queue)
 
     """
 AudioQueueNewOutput (                                // 1
