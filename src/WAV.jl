@@ -1,6 +1,6 @@
 # -*- mode: julia; -*-
 module WAV
-export wavread, wavwrite, wavappend, wavplay
+export wavread, wavwrite, wavappend, wavplay, WAVArray
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
 import Base.unbox, Base.box
 
@@ -12,6 +12,8 @@ elseif find_library(["AudioToolbox"],
 else
     wavplay(args...) = warn("wavplay is not currently implemented on $OS_NAME")
 end
+
+include("AudioDisplay.jl")
 
 # The WAV specification states that numbers are written to disk in little endian form.
 write_le(stream::IO, value::Uint8) = write(stream, value)
