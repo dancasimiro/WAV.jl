@@ -323,7 +323,7 @@ function getFormatForData(data, Fs)
                                        elSize * 8)          # bits per channel
 end
 
-function wavplay(data, Fs, args...)
+function wavplay(data, Fs)
     userData = AudioQueueData(data)
     userData.aq = AudioQueueNewOutput(getFormatForData(data, Fs), userData)
     for buf in allocateAllBuffers(userData)
