@@ -10,8 +10,9 @@ elseif find_library(["AudioToolbox"],
                     ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
     include("wavplay-audioqueue.jl")
 else
-    wavplay(args...) = warn("wavplay is not currently implemented on $OS_NAME")
+    wavplay() = warn("wavplay is not currently implemented on $OS_NAME")
 end
+wavplay(fname) = wavplay(wavread(fname)...)
 
 include("AudioDisplay.jl")
 
