@@ -98,8 +98,10 @@ type WAVFormatExtension
     valid_bits_per_sample::Uint16
     channel_mask::Uint32
     sub_format::Array{Uint8} # 16 byte GUID
+
+    WAVFormatExtension() = new(0, 0, b"")
+    WAVFormatExtension(vbsp, cm, sb) = new(vbsp, cm, sb)
 end
-WAVFormatExtension() = WAVFormatExtension(uint16(0), uint32(0), b"")
 
 # DEFINE_GUIDSTRUCT("00000001-0000-0010-8000-00aa00389b71", KSDATAFORMAT_SUBTYPE_PCM);
 const KSDATAFORMAT_SUBTYPE_PCM = [
