@@ -519,7 +519,7 @@ end
 
 # support every bit width from 1 to 8 bits
 convert_pcm_to_double(samples::Array{Uint8}, nbits::Integer) = convert(Array{Float64}, samples) ./ (2^nbits - 1) .* 2.0 .- 1.0
-convert_pcm_to_double(samples::Array{Int8}, nbits::Integer) = error("WAV files use offset binary for less than 9 bits")
+convert_pcm_to_double(::Array{Int8}, ::Integer) = error("WAV files use offset binary for less than 9 bits")
 # support every bit width from 9 to 64 bits
 convert_pcm_to_double{T<:Signed}(samples::Array{T}, nbits::Integer) = convert(Array{Float64}, samples) / (2^(nbits - 1) - 1)
 
