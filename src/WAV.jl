@@ -82,9 +82,10 @@ type WAVFormat
     extra_bytes::Array{Uint8}
 
     data_length::Uint32
+
+    WAVFormat() = new(0, 0, 0, 0, 0, 0, [], 0)
+    WAVFormat(comp, chan, fs, bytes, ba, nbits) = new(comp, chan, fs, bytes, ba, nbits, [], 0)
 end
-WAVFormat() = WAVFormat(uint16(0), uint16(0), uint32(0), uint32(0), uint16(0), uint16(0), Array(Uint8), uint32(0))
-WAVFormat(comp, chan, fs, bytes, ba, nbits) = WAVFormat(comp, chan, fs, bytes, ba, nbits, Array(Uint8), uint32(0))
 
 const WAVE_FORMAT_PCM        = 0x0001 # PCM
 const WAVE_FORMAT_IEEE_FLOAT = 0x0003 # IEEE float
