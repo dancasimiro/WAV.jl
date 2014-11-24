@@ -493,7 +493,7 @@ function compress_sample_alaw(sample::Int16)
 end
 
 
-function write_companded_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}, compander::Function)
+function write_companded_samples{T<:Integer}(io::IO, samples::Array{T}, compander::Function)
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
             const compressedByte::Uint8 = compander(samples[i, j])
@@ -502,9 +502,9 @@ function write_companded_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Ar
     end
 end
 
-function write_companded_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Array{T}, compander::Function)
+function write_companded_samples{T<:FloatingPoint}(io::IO, samples::Array{T}, compander::Function)
     samples = convert(Array{Int16}, round(samples * typemax(Int16)))
-    write_companded_samples(io, fmt, samples, compander)
+    write_companded_samples(io, samples, compander)
 end
 
 function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
@@ -620,10 +620,10 @@ function write_data(io::IO, fmt::WAVFormat, ext_fmt::WAVFormatExtension, samples
             return write_ieee_float_samples(io, fmt, samples)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
             fmt.nbits = 8
-            return write_companded_samples(io, fmt, samples, compress_sample_alaw)
+            return write_companded_samples(io, samples, compress_sample_alaw)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
             fmt.nbits = 8
-            return write_companded_samples(io, fmt, samples, compress_sample_mulaw)
+            return write_companded_samples(io, samples, compress_sample_mulaw)
         else
             error("$ext_fmt -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
         end
@@ -632,9 +632,9 @@ function write_data(io::IO, fmt::WAVFormat, ext_fmt::WAVFormatExtension, samples
     elseif fmt.compression_code == WAVE_FORMAT_IEEE_FLOAT
         return write_ieee_float_samples(io, fmt, samples)
     elseif fmt.compression_code == WAVE_FORMAT_MULAW
-        return write_companded_samples(io, fmt, samples, compress_sample_mulaw)
+        return write_companded_samples(io, samples, compress_sample_mulaw)
     elseif fmt.compression_code == WAVE_FORMAT_ALAW
-        return write_companded_samples(io, fmt, samples, compress_sample_alaw)
+        return write_companded_samples(io, samples, compress_sample_alaw)
     else
         error("$(fmt.compression_code) is an unsupported compression code.")
     end
