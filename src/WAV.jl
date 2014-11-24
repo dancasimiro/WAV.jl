@@ -79,7 +79,7 @@ type WAVFormat
     bps::Uint32 # average bytes per second
     block_align::Uint16
     nbits::Uint16
-    extra_bytes::Array{Uint8}
+    extra_bytes::Array{Uint8, 1}
 
     data_length::Uint32
 
