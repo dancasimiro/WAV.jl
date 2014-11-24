@@ -164,17 +164,13 @@ function read_header(io::IO)
     return chunk_size
 end
 
-function write_header(io::IO, fmt::WAVFormat)
+function write_header(io::IO, fmt::WAVFormat, base_chunk_size)
     write(io, b"RIFF") # RIFF header
-    write_le(io, uint32(36 + fmt.data_length)) # chunk_size
+    write_le(io, uint32(base_chunk_size + fmt.data_length)) # chunk_size
     write(io, b"WAVE")
 end
-
-function write_header(io::IO, fmt::WAVFormat, ext_fmt::WAVFormatExtension)
-    write(io, b"RIFF") # RIFF header
-    write_le(io, uint32(60 + fmt.data_length)) # chunk_size
-    write(io, b"WAVE")
-end
+write_standard_header(io, fmt) = write_header(io, fmt, 36)
+write_extended_header(io, fmt) = write_header(io, fmt, 60)
 
 function read_format(io::IO, chunk_size::Uint32)
     # can I read in all of the fields at once?
@@ -745,10 +741,10 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
         else
             error("Unsupported extension sub format: $compression")
         end
-        write_header(io, fmt, ext)
+        write_extended_header(io, fmt)
         write_format(io, fmt, ext)
     else
-        write_header(io, fmt)
+        write_standard_header(io, fmt)
         write_format(io, fmt)
     end
 
