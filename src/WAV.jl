@@ -97,7 +97,7 @@ const WAVE_FORMAT_EXTENSIBLE = 0xfffe # Extension!
 type WAVFormatExtension
     valid_bits_per_sample::Uint16
     channel_mask::Uint32
-    sub_format::Array{Uint8} # 16 byte GUID
+    sub_format::Array{Uint8, 1} # 16 byte GUID
 
     WAVFormatExtension() = new(0, 0, b"")
     WAVFormatExtension(vbsp, cm, sb) = new(vbsp, cm, sb)
