@@ -228,7 +228,7 @@ function pcm_container_type(nbits::Unsigned)
     return  Uint8
 end
 
-ieee_float_container_type(nbits::Unsigned) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
+ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
 function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1)
     samples = Array(pcm_container_type(fmt.nbits), length(subrange), fmt.nchannels)
