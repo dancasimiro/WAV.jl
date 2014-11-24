@@ -692,11 +692,11 @@ wavread(filename::String, N::Range1) = wavread(filename, subrange=N)
 wavread(filename::String, N::Int, fmt::String) = wavread(filename, subrange=N, format=fmt)
 wavread(filename::String, N::Range1, fmt::String) = wavread(filename, subrange=N, format=fmt)
 
-get_default_compression{T<:Integer}(samples::Array{T}) = WAVE_FORMAT_PCM
-get_default_compression{T<:FloatingPoint}(samples::Array{T}) = WAVE_FORMAT_IEEE_FLOAT
-get_default_pcm_precision(samples::Array{Uint8}) = 8
-get_default_pcm_precision(samples::Array{Int16}) = 16
-get_default_pcm_precision(samples) = 24
+get_default_compression{T<:Integer}(::Array{T}) = WAVE_FORMAT_PCM
+get_default_compression{T<:FloatingPoint}(::Array{T}) = WAVE_FORMAT_IEEE_FLOAT
+get_default_pcm_precision(::Array{Uint8}) = 8
+get_default_pcm_precision(::Array{Int16}) = 16
+get_default_pcm_precision(::Any) = 24
 
 function get_default_precision(samples, compression)
     if compression == WAVE_FORMAT_ALAW || compression == WAVE_FORMAT_MULAW
