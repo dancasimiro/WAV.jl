@@ -141,8 +141,8 @@ end
 #     audio queue buffer structure, AudioQueueBuffer, is initially set to 0.
 # @result     An OSStatus result code.
 function AudioQueueAllocateBuffer(aq)
-    const newBuffer::Array{AudioQueueBufferRef, 1} = AudioQueueBufferRef[0]
-    const result::OSStatus =
+    const newBuffer = Array(AudioQueueBufferRef, 1)
+    const result =
         ccall((:AudioQueueAllocateBuffer, AudioToolbox), OSStatus,
               (AudioQueueRef, UInt32, Ptr{AudioQueueBufferRef}),
               aq, 4096, newBuffer)
@@ -240,14 +240,14 @@ end
 #     object.
 # @result     An OSStatus result code.
 function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::AudioQueueData)
-    const runLoop::CFRunLoopRef = CFRunLoopGetCurrent()
+    const runLoop = CFRunLoopGetCurrent()
     userData.runLoop = runLoop
-    const runLoopMode::CFStringRef = getCoreFoundationRunLoopDefaultMode()
+    const runLoopMode = getCoreFoundationRunLoopDefaultMode()
 
-    const newAudioQueue::Array{AudioQueueRef, 1} = AudioQueueRef[0]
+    const newAudioQueue = Array(AudioQueueRef, 1)
     const cCallbackProc = cfunction(playCallback, Void,
                                     (Ptr{AudioQueueData}, AudioQueueRef, AudioQueueBufferRef))
-    const result::OSStatus =
+    const result =
         ccall((:AudioQueueNewOutput, AudioToolbox), OSStatus,
               (Ptr{AudioStreamBasicDescription}, Ptr{Void}, Ptr{Void}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
               &format, cCallbackProc, &userData, runLoop, runLoopMode, 0, newAudioQueue)
