@@ -229,7 +229,7 @@ end
 
 ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
-function read_pcm_samples(io::IO, fmt::WAVFormat, subrange::Range1)
+function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     if isempty(subrange)
         return Array(pcm_container_type(fmt.nbits), 0, fmt.nchannels)
     end
@@ -257,7 +257,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange::Range1)
     samples
 end
 
-function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1)
+function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange)
     const floatType = ieee_float_container_type(fmt.nbits)
     if isempty(subrange)
         return Array(floatType, 0, fmt.nchannels)
@@ -273,7 +273,7 @@ function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, s
     samples
 end
 
-function read_companded_samples(io::IO, fmt::WAVFormat, subrange::Range1, table)
+function read_companded_samples(io::IO, fmt::WAVFormat, subrange, table)
     if isempty(subrange)
         return Array(eltype(table), 0, fmt.nchannels)
     end
@@ -491,14 +491,6 @@ function write_companded_samples{T<:FloatingPoint}(io::IO, samples::Array{T}, co
     write_companded_samples(io, samples, compander)
 end
 
-function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
-    const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
-    if nblocks == 0
-        return Array(ieee_float_container_type(fmt.nbits), 0, fmt.nchannels)
-    end
-    read_ieee_float_samples(io, chunk_size, fmt, 1:nblocks)
-end
-
 # PCM data is two's-complement except for resolutions of 1-8 bits, which are represented as offset binary.
 
 # support every bit width from 1 to 8 bits
@@ -524,7 +516,7 @@ function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, format::String, s
             convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
             fmt.nbits = ext_fmt.valid_bits_per_sample
-            samples = read_ieee_float_samples(io, chunk_size, fmt, subrange)
+            samples = read_ieee_float_samples(io, fmt, subrange)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
             fmt.nbits = 8
             samples = read_alaw_samples(io, fmt, subrange)
@@ -538,7 +530,7 @@ function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, format::String, s
         samples = read_pcm_samples(io, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
     elseif fmt.compression_code == WAVE_FORMAT_IEEE_FLOAT
-        samples = read_ieee_float_samples(io, chunk_size, fmt, subrange)
+        samples = read_ieee_float_samples(io, fmt, subrange)
     elseif fmt.compression_code == WAVE_FORMAT_MULAW
         samples = read_mulaw_samples(io, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, 16)
