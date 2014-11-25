@@ -499,7 +499,7 @@ convert_pcm_to_double(::Array{Int8}, ::Integer) = error("WAV files use offset bi
 # support every bit width from 9 to 64 bits
 convert_pcm_to_double{T<:Signed}(samples::Array{T}, nbits::Integer) = convert(Array{Float64}, samples) / (2^(nbits - 1) - 1)
 
-function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, format::String, subrange::Any)
+function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
     # "format" is the format of values, while "fmt" is the WAV file level format
     samples = None
     convert_to_double = x -> convert(Array{Float64}, x)
@@ -658,7 +658,7 @@ function wavread(io::IO; subrange=None, format="double")
     return samples, fmt.sample_rate, fmt.nbits, None
 end
 
-function wavread(filename::String; subrange=Any, format="double")
+function wavread(filename::String; subrange=None, format="double")
     io = open(filename, "r")
     finalizer(io, close)
     const result = wavread(io, subrange=subrange, format=format)
