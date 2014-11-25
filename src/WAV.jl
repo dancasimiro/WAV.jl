@@ -282,25 +282,25 @@ function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, s
     samples
 end
 
-function read_companded_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange, table::Array{Int16})
+function read_companded_samples(io::IO, chunk_size, fmt::WAVFormat, subrange, table)
     const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
     if nblocks == 0
-        return Array(Int16, 0, fmt.nchannels)
+        return Array(eltype(table), 0, fmt.nchannels)
     end
     read_companded_samples(io, chunk_size, fmt, 1:nblocks, table)
 end
 
-function read_companded_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1, table::Array{Int16})
+function read_companded_samples(io::IO, chunk_size, fmt::WAVFormat, subrange::Range1, table)
     if isempty(subrange)
-        return Array(Int16, 0, fmt.nchannels)
+        return Array(eltype(table), 0, fmt.nchannels)
     end
     const nblocks = length(subrange)
-    samples = Array(Int16, nblocks, fmt.nchannels)
+    samples = Array(eltype(table), nblocks, fmt.nchannels)
     skip(io, uint((first(subrange) - 1) * fmt.nchannels))
     for i = 1:nblocks
         for j = 1:fmt.nchannels
             # add one to value from blocks because A-law stores values from 0 to 255.
-            const compressedByte::Uint8 = clamp(read_le(io, Uint8), 0, 255)
+            const compressedByte::UInt8 = clamp(read_le(io, UInt8), 0, 255)
             # Julia indexing is 1-based; I need a value from 1 to 256
             samples[i, j] = table[compressedByte + 1]
         end
@@ -308,7 +308,7 @@ function read_companded_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, su
     return samples
 end
 
-function read_mulaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
+function read_mulaw_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
     # Quantized μ-law algorithm -- Use a look up table to convert
     # From Wikipedia, ITU-T Recommendation G.711 and G.191 specify the following intervals:
     #
@@ -334,7 +334,7 @@ function read_mulaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subran
     # −4063 to −2016 in 16 intervals of 128  |  0x10 + interval number
     # −8159 to −4064 in 16 intervals of 256  |  0x00 + interval number
     # ---------------------------------------+--------------------------------
-    const MuLawDecompressTable::Array{Int16} =
+    const MuLawDecompressTable =
     [
     -32124,-31100,-30076,-29052,-28028,-27004,-25980,-24956,
     -23932,-22908,-21884,-20860,-19836,-18812,-17788,-16764,
@@ -373,49 +373,49 @@ function read_mulaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subran
     return read_companded_samples(io, chunk_size, fmt, subrange, MuLawDecompressTable)
 end
 
-function read_alaw_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
+function read_alaw_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
     # Quantized A-law algorithm -- Use a look up table to convert
-    const ALawDecompressTable::Array{Int16} =
+    const ALawDecompressTable =
     [
-    -5504, -5248, -6016, -5760, -4480, -4224, -4992, -4736, 
-    -7552, -7296, -8064, -7808, -6528, -6272, -7040, -6784, 
-    -2752, -2624, -3008, -2880, -2240, -2112, -2496, -2368, 
-    -3776, -3648, -4032, -3904, -3264, -3136, -3520, -3392, 
-    -22016,-20992,-24064,-23040,-17920,-16896,-19968,-18944, 
-    -30208,-29184,-32256,-31232,-26112,-25088,-28160,-27136, 
-    -11008,-10496,-12032,-11520,-8960, -8448, -9984, -9472, 
-    -15104,-14592,-16128,-15616,-13056,-12544,-14080,-13568, 
-    -344,  -328,  -376,  -360,  -280,  -264,  -312,  -296, 
-    -472,  -456,  -504,  -488,  -408,  -392,  -440,  -424, 
-    -88,   -72,   -120,  -104,  -24,   -8,    -56,   -40, 
-    -216,  -200,  -248,  -232,  -152,  -136,  -184,  -168, 
-    -1376, -1312, -1504, -1440, -1120, -1056, -1248, -1184, 
-    -1888, -1824, -2016, -1952, -1632, -1568, -1760, -1696, 
-    -688,  -656,  -752,  -720,  -560,  -528,  -624,  -592, 
-    -944,  -912,  -1008, -976,  -816,  -784,  -880,  -848, 
-    5504,  5248,  6016,  5760,  4480,  4224,  4992,  4736, 
-    7552,  7296,  8064,  7808,  6528,  6272,  7040,  6784, 
-    2752,  2624,  3008,  2880,  2240,  2112,  2496,  2368, 
-    3776,  3648,  4032,  3904,  3264,  3136,  3520,  3392, 
-    22016, 20992, 24064, 23040, 17920, 16896, 19968, 18944, 
-    30208, 29184, 32256, 31232, 26112, 25088, 28160, 27136, 
-    11008, 10496, 12032, 11520, 8960,  8448,  9984,  9472, 
-    15104, 14592, 16128, 15616, 13056, 12544, 14080, 13568, 
-    344,   328,   376,   360,   280,   264,   312,   296, 
-    472,   456,   504,   488,   408,   392,   440,   424, 
-    88,    72,   120,   104,    24,     8,    56,    40, 
-    216,   200,   248,   232,   152,   136,   184,   168, 
-    1376,  1312,  1504,  1440,  1120,  1056,  1248,  1184, 
-    1888,  1824,  2016,  1952,  1632,  1568,  1760,  1696, 
-    688,   656,   752,   720,   560,   528,   624,   592, 
-    944,   912,  1008,   976,   816,   784,   880,   848 
+    -5504, -5248, -6016, -5760, -4480, -4224, -4992, -4736,
+    -7552, -7296, -8064, -7808, -6528, -6272, -7040, -6784,
+    -2752, -2624, -3008, -2880, -2240, -2112, -2496, -2368,
+    -3776, -3648, -4032, -3904, -3264, -3136, -3520, -3392,
+    -22016,-20992,-24064,-23040,-17920,-16896,-19968,-18944,
+    -30208,-29184,-32256,-31232,-26112,-25088,-28160,-27136,
+    -11008,-10496,-12032,-11520,-8960, -8448, -9984, -9472,
+    -15104,-14592,-16128,-15616,-13056,-12544,-14080,-13568,
+    -344,  -328,  -376,  -360,  -280,  -264,  -312,  -296,
+    -472,  -456,  -504,  -488,  -408,  -392,  -440,  -424,
+    -88,   -72,   -120,  -104,  -24,   -8,    -56,   -40,
+    -216,  -200,  -248,  -232,  -152,  -136,  -184,  -168,
+    -1376, -1312, -1504, -1440, -1120, -1056, -1248, -1184,
+    -1888, -1824, -2016, -1952, -1632, -1568, -1760, -1696,
+    -688,  -656,  -752,  -720,  -560,  -528,  -624,  -592,
+    -944,  -912,  -1008, -976,  -816,  -784,  -880,  -848,
+    5504,  5248,  6016,  5760,  4480,  4224,  4992,  4736,
+    7552,  7296,  8064,  7808,  6528,  6272,  7040,  6784,
+    2752,  2624,  3008,  2880,  2240,  2112,  2496,  2368,
+    3776,  3648,  4032,  3904,  3264,  3136,  3520,  3392,
+    22016, 20992, 24064, 23040, 17920, 16896, 19968, 18944,
+    30208, 29184, 32256, 31232, 26112, 25088, 28160, 27136,
+    11008, 10496, 12032, 11520, 8960,  8448,  9984,  9472,
+    15104, 14592, 16128, 15616, 13056, 12544, 14080, 13568,
+    344,   328,   376,   360,   280,   264,   312,   296,
+    472,   456,   504,   488,   408,   392,   440,   424,
+    88,    72,   120,   104,    24,     8,    56,    40,
+    216,   200,   248,   232,   152,   136,   184,   168,
+    1376,  1312,  1504,  1440,  1120,  1056,  1248,  1184,
+    1888,  1824,  2016,  1952,  1632,  1568,  1760,  1696,
+    688,   656,   752,   720,   560,   528,   624,   592,
+    944,   912,  1008,   976,   816,   784,   880,   848
      ]
     @assert length(ALawDecompressTable) == 256
     return read_companded_samples(io, chunk_size, fmt, subrange, ALawDecompressTable)
 end
 
-function compress_sample_mulaw(sample::Int16)
-    const MuLawCompressTable::Array{Uint8} =
+function compress_sample_mulaw(sample)
+    const MuLawCompressTable =
     [
     0,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,
     4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
@@ -435,10 +435,10 @@ function compress_sample_mulaw(sample::Int16)
     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
      ]
     @assert length(MuLawCompressTable) == 256
-    const cBias::Int16 = 0x84
-    const cClip::Int16 = 32635
+    const cBias = 0x84
+    const cClip = 32635
 
-    const sign::Uint8 = (sample >>> 8) & 0x80
+    const sign = (sample >>> 8) & 0x80
     if sign != 0
         sample = -sample
     end
@@ -446,13 +446,13 @@ function compress_sample_mulaw(sample::Int16)
         sample = cClip
     end
     sample = sample + cBias
-    const exponent::Uint8 = MuLawCompressTable[(sample >>> 7) + 1]
-    const mantissa::Uint8 = (sample >> (exponent+3)) & 0x0F
-    ~ (sign | (exponent << 4) | mantissa)
+    const exponent = MuLawCompressTable[(sample >>> 7) + 1]
+    const mantissa = (sample >> (exponent+3)) & 0x0F
+    (~ (sign | (exponent << 4) | mantissa)) & 0xff
 end
 
-function compress_sample_alaw(sample::Int16)
-    const ALawCompressTable::Array{Uint8} =
+function compress_sample_alaw(sample)
+    const ALawCompressTable =
     [
     1,1,2,2,3,3,3,3,
     4,4,4,4,4,4,4,4,
@@ -472,32 +472,33 @@ function compress_sample_alaw(sample::Int16)
     7,7,7,7,7,7,7,7
      ]
     @assert length(ALawCompressTable) == 128
-    const cBias::Int16 = 0x84
-    const cClip::Int16 = 32635
-    const sign::Int = ((~sample >>> 8) & 0x80)
+    const cBias = 0x84
+    const cClip = 32635
+    const sign = ((~sample >>> 8) & 0x80)
     if sign == 0
         sample = -sample
     end
     if sample > cClip
         sample = cClip
     end
-    compressedByte::Uint8 = 0
+    compressedByte = 0
     if sample >= 256
-        const exponent::Int = ALawCompressTable[((sample >>> 8) & 0x7f) + 1]
-        const mantissa::Int = (sample >>> (exponent + 3) ) & 0x0f
-        compressedByte = uint8((exponent << 4) | mantissa)
+        const exponent = ALawCompressTable[((sample >>> 8) & 0x7f) + 1]
+        const mantissa = (sample >>> (exponent + 3) ) & 0x0f
+        compressedByte = ((exponent << 4) | mantissa) & 0xff
     else
-        compressedByte = uint8(sample >>> 4)
+        compressedByte = (sample >>> 4) & 0xff
     end
     compressedByte $= (sign $ 0x55)
+    compressedByte & 0xff
 end
 
 
 function write_companded_samples{T<:Integer}(io::IO, samples::Array{T}, compander::Function)
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
-            const compressedByte::Uint8 = compander(samples[i, j])
-            write_le(io, compressedByte)
+            const compressedByte = compander(samples[i, j])
+            write_le(io, convert(UInt8, compressedByte))
         end
     end
 end
