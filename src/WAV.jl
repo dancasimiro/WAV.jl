@@ -229,11 +229,11 @@ end
 
 ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
-function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1)
-    samples = Array(pcm_container_type(fmt.nbits), length(subrange), fmt.nchannels)
+function read_pcm_samples(io::IO, fmt::WAVFormat, subrange::Range1)
     if isempty(subrange)
-        return samples
+        return Array(pcm_container_type(fmt.nbits), 0, fmt.nchannels)
     end
+    samples = Array(pcm_container_type(fmt.nbits), length(subrange), fmt.nchannels)
     const nbytes = iceil(fmt.nbits / 8)
     const bitshift::Array{Uint} = linspace(0, 64, 9)
     const mask = unsigned(1) << (fmt.nbits - 1)
@@ -257,15 +257,6 @@ function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange
     samples
 end
 
-# "subrange" is a placeholder for None in this method
-function read_pcm_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange)
-    const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
-    if nblocks == 0
-        return Array(pcm_container_type(fmt.nbits), 0, fmt.nchannels)
-    end
-    read_pcm_samples(io, chunk_size, fmt, 1:nblocks)
-end
-
 function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, subrange::Range1)
     const floatType = ieee_float_container_type(fmt.nbits)
     if isempty(subrange)
@@ -282,15 +273,7 @@ function read_ieee_float_samples(io::IO, chunk_size::Unsigned, fmt::WAVFormat, s
     samples
 end
 
-function read_companded_samples(io::IO, chunk_size, fmt::WAVFormat, subrange, table)
-    const nblocks = uint(chunk_size / fmt.block_align) # each block stores fmt.nchannels channels
-    if nblocks == 0
-        return Array(eltype(table), 0, fmt.nchannels)
-    end
-    read_companded_samples(io, chunk_size, fmt, 1:nblocks, table)
-end
-
-function read_companded_samples(io::IO, chunk_size, fmt::WAVFormat, subrange::Range1, table)
+function read_companded_samples(io::IO, fmt::WAVFormat, subrange::Range1, table)
     if isempty(subrange)
         return Array(eltype(table), 0, fmt.nchannels)
     end
@@ -308,7 +291,7 @@ function read_companded_samples(io::IO, chunk_size, fmt::WAVFormat, subrange::Ra
     return samples
 end
 
-function read_mulaw_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
+function read_mulaw_samples(io::IO, fmt::WAVFormat, subrange)
     # Quantized μ-law algorithm -- Use a look up table to convert
     # From Wikipedia, ITU-T Recommendation G.711 and G.191 specify the following intervals:
     #
@@ -370,10 +353,10 @@ function read_mulaw_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
     56,    48,    40,    32,    24,    16,     8,     0
      ]
     @assert length(MuLawDecompressTable) == 256
-    return read_companded_samples(io, chunk_size, fmt, subrange, MuLawDecompressTable)
+    return read_companded_samples(io, fmt, subrange, MuLawDecompressTable)
 end
 
-function read_alaw_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
+function read_alaw_samples(io::IO, fmt::WAVFormat, subrange)
     # Quantized A-law algorithm -- Use a look up table to convert
     const ALawDecompressTable =
     [
@@ -411,7 +394,7 @@ function read_alaw_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
     944,   912,  1008,   976,   816,   784,   880,   848
      ]
     @assert length(ALawDecompressTable) == 256
-    return read_companded_samples(io, chunk_size, fmt, subrange, ALawDecompressTable)
+    return read_companded_samples(io, fmt, subrange, ALawDecompressTable)
 end
 
 function compress_sample_mulaw(sample)
@@ -528,34 +511,39 @@ function read_data(io::IO, chunk_size::Uint32, fmt::WAVFormat, format::String, s
     # "format" is the format of values, while "fmt" is the WAV file level format
     samples = None
     convert_to_double = x -> convert(Array{Float64}, x)
+
+    if subrange === None
+        # each block stores fmt.nchannels channels
+        subrange = 1:uint(chunk_size / fmt.block_align)
+    end
     if fmt.compression_code == WAVE_FORMAT_EXTENSIBLE
         ext_fmt = WAVFormatExtension(fmt.extra_bytes)
         if ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_PCM
             fmt.nbits = ext_fmt.valid_bits_per_sample
-            samples = read_pcm_samples(io, chunk_size, fmt, subrange)
+            samples = read_pcm_samples(io, fmt, subrange)
             convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
             fmt.nbits = ext_fmt.valid_bits_per_sample
             samples = read_ieee_float_samples(io, chunk_size, fmt, subrange)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
             fmt.nbits = 8
-            samples = read_alaw_samples(io, chunk_size, fmt, subrange)
+            samples = read_alaw_samples(io, fmt, subrange)
         elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
             fmt.nbits = 8
-            samples = read_mulaw_samples(io, chunk_size, fmt, subrange)
+            samples = read_mulaw_samples(io, fmt, subrange)
         else
             error("$ext_fmt -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
         end
     elseif fmt.compression_code == WAVE_FORMAT_PCM
-        samples = read_pcm_samples(io, chunk_size, fmt, subrange)
+        samples = read_pcm_samples(io, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
     elseif fmt.compression_code == WAVE_FORMAT_IEEE_FLOAT
         samples = read_ieee_float_samples(io, chunk_size, fmt, subrange)
     elseif fmt.compression_code == WAVE_FORMAT_MULAW
-        samples = read_mulaw_samples(io, chunk_size, fmt, subrange)
+        samples = read_mulaw_samples(io, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, 16)
     elseif fmt.compression_code == WAVE_FORMAT_ALAW
-        samples = read_alaw_samples(io, chunk_size, fmt, subrange)
+        samples = read_alaw_samples(io, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, 16)
     else
         error("$(fmt.compression_code) is an unsupported compression code!")
