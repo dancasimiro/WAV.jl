@@ -668,10 +668,10 @@ end
 
 # These are the MATLAB compatible signatures
 wavread(filename::String, fmt::String) = wavread(filename, format=fmt)
-wavread(filename::String, N::Int) = wavread(filename, subrange=N)
-wavread(filename::String, N::Range1) = wavread(filename, subrange=N)
-wavread(filename::String, N::Int, fmt::String) = wavread(filename, subrange=N, format=fmt)
-wavread(filename::String, N::Range1, fmt::String) = wavread(filename, subrange=N, format=fmt)
+wavread(filename::String, n::Int) = wavread(filename, subrange=n)
+wavread(filename::String, n::Range1) = wavread(filename, subrange=n)
+wavread(filename::String, n::Int, fmt::String) = wavread(filename, subrange=n, format=fmt)
+wavread(filename::String, n::Range1, fmt::String) = wavread(filename, subrange=n, format=fmt)
 
 get_default_compression{T<:Integer}(::Array{T}) = WAVE_FORMAT_PCM
 get_default_compression{T<:FloatingPoint}(::Array{T}) = WAVE_FORMAT_IEEE_FLOAT
@@ -781,7 +781,7 @@ function wavappend(samples::Array, filename::String)
 end
 
 wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, Fs=f)
-wavwrite(y::Array, f::Real, N::Real, filename::String) = wavwrite(y, filename, Fs=f, nbits=N)
+wavwrite(y::Array, f::Real, n::Real, filename::String) = wavwrite(y, filename, Fs=f, nbits=n)
 
 # support for writing native arrays...
 wavwrite{T<:Integer}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8)
