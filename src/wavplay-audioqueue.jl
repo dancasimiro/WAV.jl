@@ -308,12 +308,12 @@ end
 getFormatFlags(el) = el <: FloatingPoint ? kAudioFormatFlagIsFloat : 0
 
 # LEUI8, LEI16, LEI24, LEI32, LEF32, LEF64, 'ulaw', 'alaw'
-function getFormatForData(data, Fs)
+function getFormatForData(data, fs)
     const elType = eltype(data)
     const fmtFlags = getFormatFlags(elType)
     const elSize = sizeof(elType)
     const nChannels = size(data, 2)
-    return AudioStreamBasicDescription(Fs,
+    return AudioStreamBasicDescription(fs,
                                        kAudioFormatLinearPCM,
                                        fmtFlags,
                                        elSize * nChannels,  # bytes per packet
@@ -323,9 +323,9 @@ function getFormatForData(data, Fs)
                                        elSize * 8)          # bits per channel
 end
 
-function wavplay(data, Fs)
+function wavplay(data, fs)
     userData = AudioQueueData(data)
-    userData.aq = AudioQueueNewOutput(getFormatForData(data, Fs), userData)
+    userData.aq = AudioQueueNewOutput(getFormatForData(data, fs), userData)
     for buf in allocateAllBuffers(userData)
         enqueueBuffer(userData, buf)
     end
