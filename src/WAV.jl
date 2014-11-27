@@ -234,7 +234,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
         return Array(pcm_container_type(fmt.nbits), 0, fmt.nchannels)
     end
     samples = Array(pcm_container_type(fmt.nbits), length(subrange), fmt.nchannels)
-    const nbytes = iceil(fmt.nbits / 8)
+    const nbytes = ceil(Integer, fmt.nbits / 8)
     const bitshift::Array{Uint} = linspace(0, 64, 9)
     const mask = unsigned(1) << (fmt.nbits - 1)
     const signextend_mask = ~unsigned(0) << fmt.nbits
@@ -548,7 +548,7 @@ end
 
 function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T})
     # number of bytes per sample
-    const nbytes = iceil(fmt.nbits / 8)
+    const nbytes = ceil(Integer, fmt.nbits / 8)
     const bitshift::Array{Uint} = linspace(0, 64, 9)
     const minval = fmt.nbits > 8 ? -2^(fmt.nbits - 1) : -2^(fmt.nbits)
     const maxval = fmt.nbits > 8 ? 2^(fmt.nbits - 1) - 1 : 2^(fmt.nbits) - 1
@@ -701,7 +701,7 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
     fmt.compression_code = compression
     fmt.nchannels = size(samples, 2)
     fmt.sample_rate = Fs
-    fmt.nbits = iceil(nbits / 8) * 8
+    fmt.nbits = ceil(Integer, nbits / 8) * 8
     fmt.block_align = fmt.nbits / 8 * fmt.nchannels
     fmt.bps = fmt.sample_rate * fmt.block_align
     fmt.data_length = size(samples, 1) * fmt.block_align
