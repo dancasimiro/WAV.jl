@@ -5,8 +5,8 @@ immutable PulseSample
     channels::Uint8
 end
 
-function wavplay(data, Fs)
-    ss = PulseSample(5,Fs,size(data,2))
+function wavplay(data, fs)
+    ss = PulseSample(5,fs,size(data,2))
     data = convert(Array{Float32}, data)
 
     err = Cint[0]
