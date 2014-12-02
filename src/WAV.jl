@@ -3,6 +3,7 @@ module WAV
 export wavread, wavwrite, wavappend, wavplay, WAVArray
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
 import Base.unbox, Base.box
+using Compat
 
 if find_library(["libpulse-simple"]) != ""
     include("wavplay-pulse.jl")
