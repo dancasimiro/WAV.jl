@@ -21,31 +21,28 @@ include("AudioDisplay.jl")
 write_le(stream::IO, value::UInt8) = write(stream, value)
 
 function write_le(stream::IO, value::UInt16)
-    write(stream, UInt8((value & 0x00ff)     ))
-    write(stream, UInt8((value & 0xff00) >> 8))
+    write(stream, convert(UInt8, (value & 0x00ff)     ))
+    write(stream, convert(UInt8, (value & 0xff00) >> 8))
 end
 
 function write_le(stream::IO, value::UInt32)
-    write(stream, UInt8((value & 0x000000ff)      ))
-    write(stream, UInt8((value & 0x0000ff00) >>  8))
-    write(stream, UInt8((value & 0x00ff0000) >> 16))
-    write(stream, UInt8((value & 0xff000000) >> 24))
+    write(stream, convert(UInt8, (value & 0x000000ff)      ))
+    write(stream, convert(UInt8, (value & 0x0000ff00) >>  8))
+    write(stream, convert(UInt8, (value & 0x00ff0000) >> 16))
+    write(stream, convert(UInt8, (value & 0xff000000) >> 24))
 end
 
 function write_le(stream::IO, value::UInt64)
-    write(stream, UInt8((value & 0x00000000000000ff)      ))
-    write(stream, UInt8((value & 0x000000000000ff00) >>  8))
-    write(stream, UInt8((value & 0x0000000000ff0000) >> 16))
-    write(stream, UInt8((value & 0x00000000ff000000) >> 24))
-    write(stream, UInt8((value & 0x000000ff00000000) >> 32))
-    write(stream, UInt8((value & 0x0000ff0000000000) >> 40))
-    write(stream, UInt8((value & 0x00ff000000000000) >> 48))
-    write(stream, UInt8((value & 0xff00000000000000) >> 56))
+    write(stream, convert(UInt8, (value & 0x00000000000000ff)      ))
+    write(stream, convert(UInt8, (value & 0x000000000000ff00) >>  8))
+    write(stream, convert(UInt8, (value & 0x0000000000ff0000) >> 16))
+    write(stream, convert(UInt8, (value & 0x00000000ff000000) >> 24))
+    write(stream, convert(UInt8, (value & 0x000000ff00000000) >> 32))
+    write(stream, convert(UInt8, (value & 0x0000ff0000000000) >> 40))
+    write(stream, convert(UInt8, (value & 0x00ff000000000000) >> 48))
+    write(stream, convert(UInt8, (value & 0xff00000000000000) >> 56))
 end
 
-write_le(stream::IO, value::Int16) = write_le(stream, UInt16(value))
-write_le(stream::IO, value::Int32) = write_le(stream, UInt32(value))
-write_le(stream::IO, value::Int64) = write_le(stream, UInt64(value))
 write_le(stream::IO, value::Float32) = write_le(stream, box(UInt32, unbox(Float32, value)))
 write_le(stream::IO, value::Float64) = write_le(stream, box(UInt64, unbox(Float64, value)))
 
@@ -66,9 +63,6 @@ function read_le(stream::IO, ::Type{UInt64})
     (bytes[8] << 56) | (bytes[7] << 48) | (bytes[6] << 40) | (bytes[5] << 32) | (bytes[4] << 24) | (bytes[3] << 16) | (bytes[2] << 8) | bytes[1]
 end
 
-read_le(stream::IO, ::Type{Int16}) = Int16(read_le(stream, UInt16))
-read_le(stream::IO, ::Type{Int32}) = Int32(read_le(stream, UInt32))
-read_le(stream::IO, ::Type{Int64}) = Int64(read_le(stream, UInt64))
 read_le(stream::IO, ::Type{Float32}) = box(Float32, unbox(UInt32, read_le(stream, UInt32)))
 read_le(stream::IO, ::Type{Float64}) = box(Float64, unbox(UInt64, read_le(stream, UInt64)))
 
@@ -142,8 +136,8 @@ function WAVFormatExtension(bytes::Array{UInt8})
         error("There are not the right number of bytes for the WAVFormat Extension")
     end
     # split bytes into valid_bits_per_sample, channel_mask, and sub_format
-    valid_bits_per_sample = (UInt16(bytes[2]) << 8) | UInt16(bytes[1])
-    channel_mask = (UInt32(bytes[6]) << 24) | (UInt32(bytes[5]) << 16) | (UInt32(bytes[4]) << 8) | UInt32(bytes[3])
+    valid_bits_per_sample = (convert(UInt16, bytes[2]) << 8) | convert(UInt16, bytes[1])
+    channel_mask = (convert(UInt32, bytes[6]) << 24) | (convert(UInt32, bytes[5]) << 16) | (convert(UInt32, bytes[4]) << 8) | convert(UInt32, bytes[3])
     sub_format = bytes[7:end]
     return WAVFormatExtension(valid_bits_per_sample, channel_mask, sub_format)
 end
@@ -167,7 +161,7 @@ end
 
 function write_header(io::IO, fmt::WAVFormat, base_chunk_size)
     write(io, b"RIFF") # RIFF header
-    write_le(io, UInt32(base_chunk_size + fmt.data_length)) # chunk_size
+    write_le(io, convert(UInt32, base_chunk_size + fmt.data_length)) # chunk_size
     write(io, b"WAVE")
 end
 write_standard_header(io, fmt) = write_header(io, fmt, 36)
@@ -175,7 +169,7 @@ write_extended_header(io, fmt) = write_header(io, fmt, 60)
 
 function read_format(io::IO, chunk_size::UInt32)
     # can I read in all of the fields at once?
-    orig_chunk_size = Int(chunk_size)
+    orig_chunk_size = convert(Int, chunk_size)
     if chunk_size < 16
         error("The WAVE Format chunk must be at least 16 bytes")
     end
@@ -197,7 +191,7 @@ end
 function write_format(io::IO, fmt::WAVFormat, ext_length::Integer)
     # write the fmt subchunk header
     write(io, b"fmt ")
-    write_le(io, UInt32(16 + ext_length)) # subchunk length; 16 is size of base format chunk
+    write_le(io, convert(UInt32, 16 + ext_length)) # subchunk length; 16 is size of base format chunk
 
     write_le(io, fmt.compression_code) # audio format (UInt16)
     write_le(io, fmt.nchannels) # number of channels (UInt16)
@@ -210,7 +204,7 @@ write_format(io::IO, fmt::WAVFormat) = write_format(io, fmt, 0)
 
 function write_format(io::IO, fmt::WAVFormat, ext::WAVFormatExtension)
     write_format(io, fmt, 24) # 24 is the added length needed to encode the extension
-    write_le(io, UInt16(22))
+    write_le(io, convert(UInt16, 22))
     write_le(io, ext.valid_bits_per_sample)
     write_le(io, ext.channel_mask)
     @assert length(ext.sub_format) == 16
@@ -239,13 +233,13 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     const bitshift::Array{UInt} = linspace(0, 64, 9)
     const mask = unsigned(1) << (fmt.nbits - 1)
     const signextend_mask = ~unsigned(0) << fmt.nbits
-    skip(io, UInt((first(subrange) - 1) * nbytes * fmt.nchannels))
+    skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
             raw_sample = read(io, UInt8, nbytes)
-            my_sample = UInt64(0)
+            my_sample::UInt64 = 0
             for k = 1:nbytes
-                my_sample |= UInt64(raw_sample[k]) << bitshift[k]
+                my_sample |= convert(UInt64, raw_sample[k]) << bitshift[k]
             end
             my_sample >>= nbytes * 8 - fmt.nbits
             # sign extend negative values
@@ -265,7 +259,7 @@ function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange)
     end
     const nblocks = length(subrange)
     samples = Array(floatType, nblocks, fmt.nchannels)
-    skip(io, UInt((first(subrange) - 1) * (fmt.nbits / 8) * fmt.nchannels))
+    skip(io, convert(UInt, (first(subrange) - 1) * (fmt.nbits / 8) * fmt.nchannels))
     for i = 1:nblocks
         for j = 1:fmt.nchannels
             samples[i, j] = read_le(io, floatType)
@@ -280,7 +274,7 @@ function read_companded_samples(io::IO, fmt::WAVFormat, subrange, table)
     end
     const nblocks = length(subrange)
     samples = Array(eltype(table), nblocks, fmt.nchannels)
-    skip(io, UInt((first(subrange) - 1) * fmt.nchannels))
+    skip(io, convert(UInt, (first(subrange) - 1) * fmt.nchannels))
     for i = 1:nblocks
         for j = 1:fmt.nchannels
             # add one to value from blocks because A-law stores values from 0 to 255.
@@ -507,7 +501,7 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
 
     if subrange === None
         # each block stores fmt.nchannels channels
-        subrange = 1:UInt(chunk_size / fmt.block_align)
+        subrange = 1:convert(UInt, chunk_size / fmt.block_align)
     end
     if fmt.compression_code == WAVE_FORMAT_EXTENSIBLE
         ext_fmt = WAVFormatExtension(fmt.extra_bytes)
@@ -560,7 +554,7 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
             my_sample <<= nbytes * 8 - fmt.nbits
             mask = convert(typeof(my_sample), 0xff)
             for k = 1:nbytes
-                write_le(io, UInt8((my_sample & mask) >> bitshift[k]))
+                write_le(io, convert(UInt8, (my_sample & mask) >> bitshift[k]))
                 mask <<= 8
             end
         end
@@ -647,7 +641,7 @@ function wavread(io::IO; subrange=None, format="double")
             fmt = read_format(io, subchunk_size)
         elseif subchunk_id == b"data"
             if format == "size"
-                return Int(subchunk_size / fmt.block_align), Int(fmt.nchannels)
+                return convert(Int, subchunk_size / fmt.block_align), convert(Int, fmt.nchannels)
             end
             samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
@@ -762,12 +756,12 @@ function wavappend(samples::Array, io::IO)
     fmt.data_length = size(samples, 1) * fmt.block_align
 
     seek(io,4)
-    write_le(io, UInt32(chunk_size + fmt.data_length))
+    write_le(io, convert(UInt32, chunk_size + fmt.data_length))
 
     seek(io,64)
     subchunk_size = read_le(io, UInt32)
     seek(io,64)
-    write_le(io, UInt32(subchunk_size + fmt.data_length))
+    write_le(io, convert(UInt32, subchunk_size + fmt.data_length))
 
     seekend(io)
     write_data(io, fmt, ext, samples)

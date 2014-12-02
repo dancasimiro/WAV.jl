@@ -114,8 +114,8 @@ type AudioQueueData
     nBuffersEnqueued::UInt
     runLoop::CFRunLoopRef
 
-    AudioQueueData(samples) = new(samples, AudioQueueRef(0), 1,
-                                  size(samples, 1), 0, CFRunLoopRef(0))
+    AudioQueueData(samples) = new(samples, convert(AudioQueueRef, 0), 1,
+                                  size(samples, 1), 0, convert(CFRunLoopRef, 0))
 end
 
 function AudioQueueFreeBuffer(aq::AudioQueueRef, buf::AudioQueueBufferRef)
