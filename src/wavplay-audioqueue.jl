@@ -305,7 +305,14 @@ function AudioQueueStop(aq, immediate)
                          (AudioQueueRef, Bool), aq, immediate)
 end
 
-getFormatFlags(el) = el <: FloatingPoint ? kAudioFormatFlagIsFloat : 0
+function getFormatFlags(el)
+    if el <: FloatingPoint
+        return kAudioFormatFlagIsFloat
+    elseif el <: Integer
+        return kAudioFormatFlagIsSignedInteger
+    end
+    return 0
+end
 
 # LEUI8, LEI16, LEI24, LEI32, LEF32, LEF64, 'ulaw', 'alaw'
 function getFormatForData(data, fs)
