@@ -252,8 +252,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     samples
 end
 
-function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange)
-    const floatType = ieee_float_container_type(fmt.nbits)
+function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, floatType)
     if isempty(subrange)
         return Array(floatType, 0, fmt.nchannels)
     end
@@ -266,6 +265,12 @@ function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange)
         end
     end
     samples
+end
+
+# take the loop variable type out of the loop
+function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange)
+    const floatType = ieee_float_container_type(fmt.nbits)
+    read_ieee_float_samples(io, fmt, subrange, floatType)
 end
 
 function read_companded_samples(io::IO, fmt::WAVFormat, subrange, table)
@@ -573,9 +578,7 @@ function write_pcm_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Ar
     return write_pcm_samples(io, fmt, samples)
 end
 
-function write_ieee_float_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Array{T})
-    const floatType = ieee_float_container_type(fmt.nbits)
-    samples = convert(Array{floatType}, samples)
+function write_ieee_float_samples(io::IO, samples, floatType)
     const minval = convert(floatType, -1.0)
     const maxval = convert(floatType, 1.0)
     # Interleave the channel samples before writing to the stream.
@@ -584,6 +587,12 @@ function write_ieee_float_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samp
             write_le(io, clamp(samples[i, j], minval, maxval))
         end
     end
+end
+
+# take the loop variable type out of the loop
+function write_ieee_float_samples(io::IO, fmt::WAVFormat, samples)
+    const floatType = ieee_float_container_type(fmt.nbits)
+    write_ieee_float_samples(io, convert(Array{floatType}, samples), floatType)
 end
 
 function write_data(io::IO, fmt::WAVFormat, ext_fmt::WAVFormatExtension, samples::Array)
