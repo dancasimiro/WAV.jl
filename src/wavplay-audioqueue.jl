@@ -122,6 +122,9 @@ function AudioQueueFreeBuffer(aq::AudioQueueRef, buf::AudioQueueBufferRef)
     const result = ccall((:AudioQueueFreeBuffer, AudioToolbox),
                          OSStatus,
                          (AudioQueueRef, AudioQueueBufferRef), aq, buf)
+    if result != 0
+        error("AudioQueueFreeBuffer failed with $result")
+    end
 end
 
 # @function   AudioQueueAllocateBuffer
@@ -146,6 +149,9 @@ function AudioQueueAllocateBuffer(aq)
         ccall((:AudioQueueAllocateBuffer, AudioToolbox), OSStatus,
               (AudioQueueRef, UInt32, Ptr{AudioQueueBufferRef}),
               aq, 4096, newBuffer)
+    if result != 0
+        error("AudioQueueAllocateBuffer failed with $result")
+    end
     buf = newBuffer[1]
     return buf
 end
@@ -170,6 +176,9 @@ function AudioQueueEnqueueBuffer(aq, bufPtr, data)
                          OSStatus,
                          (AudioQueueRef, AudioQueueBufferRef, UInt32, Ptr{Void}),
                          aq, bufPtr, 0, 0)
+    if result != 0
+        error("AudioQueueEnqueueBuffer failed with $result")
+    end
     return nSamples
 end
 
@@ -251,7 +260,9 @@ function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::Audi
         ccall((:AudioQueueNewOutput, AudioToolbox), OSStatus,
               (Ptr{AudioStreamBasicDescription}, Ptr{Void}, Ptr{Void}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
               &format, cCallbackProc, &userData, runLoop, runLoopMode, 0, newAudioQueue)
-
+    if result != 0
+        error("AudioQueueNewOutput failed with $result")
+    end
     return newAudioQueue[1]
 end
 
@@ -259,6 +270,9 @@ function AudioQueueDispose(aq::AudioQueueRef, immediate::Bool)
     const result = ccall((:AudioQueueDispose, AudioToolbox),
                          OSStatus,
                          (AudioQueueRef, Bool), aq, immediate)
+    if result != 0
+        error("AudioQueueDispose failed with $result")
+    end
 end
 
 # @function   AudioQueueStart
@@ -275,6 +289,9 @@ end
 function AudioQueueStart(aq)
     const result = ccall((:AudioQueueStart, AudioToolbox), OSStatus,
                          (AudioQueueRef, Ptr{AudioTimeStamp}), aq, 0)
+    if result != 0
+        error("AudioQueueStart failed with $result")
+    end
 end
 
 # @function   AudioQueueStop
@@ -303,15 +320,19 @@ end
 function AudioQueueStop(aq, immediate)
     const result = ccall((:AudioQueueStop, AudioToolbox), OSStatus,
                          (AudioQueueRef, Bool), aq, immediate)
+    if result != 0
+        error("AudioQueueStop failed with $result")
+    end
 end
 
 function getFormatFlags(el)
+    flags = kAudioFormatFlagsAreAllClear
     if el <: FloatingPoint
-        return kAudioFormatFlagIsFloat
+        flags |= kAudioFormatFlagIsFloat
     elseif el <: Integer
-        return kAudioFormatFlagIsSignedInteger
+        flags |= kAudioFormatFlagIsSignedInteger
     end
-    return 0
+    return flags
 end
 
 # LEUI8, LEI16, LEI24, LEI32, LEF32, LEF64, 'ulaw', 'alaw'
