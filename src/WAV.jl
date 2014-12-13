@@ -421,17 +421,17 @@ function compress_sample_mulaw(sample)
     const cBias = 0x84
     const cClip = 32635
 
-    const sign = (sample >>> 8) & 0x80
-    if sign != 0
+    const sampleSign = (sample >>> 8) & 0x80
+    if sampleSign != 0
         sample = -sample
     end
     if sample > cClip
         sample = cClip
     end
     sample = sample + cBias
-    const exponent = MuLawCompressTable[(sample >>> 7) + 1]
-    const mantissa = (sample >> (exponent+3)) & 0x0F
-    (~ (sign | (exponent << 4) | mantissa)) & 0xff
+    const sampleExponent = MuLawCompressTable[(sample >>> 7) + 1]
+    const mantissa = (sample >> (sampleExponent+3)) & 0x0F
+    (~ (sampleSign | (sampleExponent << 4) | mantissa)) & 0xff
 end
 
 function compress_sample_alaw(sample)
@@ -457,8 +457,8 @@ function compress_sample_alaw(sample)
     @assert length(ALawCompressTable) == 128
     const cBias = 0x84
     const cClip = 32635
-    const sign = ((~sample >>> 8) & 0x80)
-    if sign == 0
+    const sampleSign = ((~sample >>> 8) & 0x80)
+    if sampleSign == 0
         sample = -sample
     end
     if sample > cClip
@@ -466,13 +466,13 @@ function compress_sample_alaw(sample)
     end
     compressedByte = 0
     if sample >= 256
-        const exponent = ALawCompressTable[((sample >>> 8) & 0x7f) + 1]
-        const mantissa = (sample >>> (exponent + 3) ) & 0x0f
-        compressedByte = ((exponent << 4) | mantissa) & 0xff
+        const sampleExponent = ALawCompressTable[((sample >>> 8) & 0x7f) + 1]
+        const mantissa = (sample >>> (sampleExponent + 3) ) & 0x0f
+        compressedByte = ((sampleExponent << 4) | mantissa) & 0xff
     else
         compressedByte = (sample >>> 4) & 0xff
     end
-    compressedByte $= (sign $ 0x55)
+    compressedByte $= (sampleSign $ 0x55)
     compressedByte & 0xff
 end
 
