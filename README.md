@@ -13,17 +13,21 @@ Installation
 Getting Started
 ---------------
 
-WAV provides `wavread`, `wavwrite`, and `wavappend` commands to read, write, and append WAV files. Here is an example to get you started. It generates some data, writes it to a file and then reads the data back.
+WAV provides `wavread`, `wavwrite`, and `wavappend` commands to read,
+write, and append WAV files. Here is an example to get you started. It
+generates some data, writes it to a file and then reads the data back.
+`wavplay` is also provided for simple audio playback.
 
 ```jlcon
 julia> using WAV
 julia> x = [0:7999]
 julia> y = sin(2 * pi * x / 8000)
-julia> wavwrite(y, "example.wav", Fs=8000)
-julia> y, Fs = wavread("example.wav")
+julia> wavwrite(y, "example.wav", fs=8000)
+julia> y, fs = wavread("example.wav")
 julia> y = cos(2 * pi * x / 8000)
 julia> wavappend(y, "example.wav")
-julia> y, Fs = wavread("example.wav")
+julia> y, fs = wavread("example.wav")
+julia> wavplay(y, fs)
 ```
 
 wavread
@@ -133,3 +137,23 @@ Append samples to an existing WAV file.  All parameters (data type and range, ou
 function wavappend(samples::Array, io::IO)
 function wavappend(samples::Array, filename::String)
 ```
+
+wavplay
+-------
+
+Playing audio back is also supported. The supported backends are:
+AudioQueue (MacOSX) and Pulse Audio (Linux, libpulse-simple). There is
+not a native backend for Windows yet.
+
+```julia
+function wavplay(samples::Array, fs::Number)
+```
+
+Other Julia Audio Packages
+-----------------------
+
+[AudioIO](https://github.com/ssfrr/AudioIO.jl) is another audio
+library in the Julia ecosystem. It supports more file formats
+(including WAV) and implements a more powerful playback
+interface. However, the license is more restrictive (GPL) because
+of a dependence on [libsndfile](http://www.mega-nerd.com/libsndfile/).
