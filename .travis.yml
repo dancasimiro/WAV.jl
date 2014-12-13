@@ -1,18 +1,4 @@
-language: cpp
-compiler:
-  - clang
-notifications:
-  email: false
-env:
-  matrix: 
-    - JULIAVERSION="juliareleases" 
-    - JULIAVERSION="julianightlies" 
-before_install:
-  - sudo add-apt-repository ppa:staticfloat/julia-deps -y
-  - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
-  - sudo apt-get update -qq -y
-  - sudo apt-get install libpcre3-dev julia -y
-script:
-  - julia -e 'Pkg.init(); run(`ln -s $(pwd()) $(Pkg.dir("WAV"))`); Pkg.pin("WAV"); Pkg.resolve()'
-  - julia -e 'using WAV; @assert isdefined(:WAV); @assert typeof(WAV) === Module'
-  - julia ./test/runtests.jl
+language: julia
+julia:
+  - release
+  - nightly
