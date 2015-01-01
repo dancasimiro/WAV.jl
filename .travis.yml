@@ -2,3 +2,5 @@ language: julia
 julia:
   - release
   - nightly
+after_success:
+- julia -e 'cd(Pkg.dir("WAV")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
