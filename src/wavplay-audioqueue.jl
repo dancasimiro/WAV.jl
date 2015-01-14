@@ -351,7 +351,10 @@ function getFormatForData(data, fs)
                                        elSize * 8)          # bits per channel
 end
 
-function wavplay(data, fs)
+
+wavplay(data::Vector, fs) = wavplay([data data], fs)
+
+function wavplay(data::Matrix, fs)
     userData = AudioQueueData(data)
     userData.aq = AudioQueueNewOutput(getFormatForData(data, fs), userData)
     for buf in allocateAllBuffers(userData)
