@@ -43,6 +43,41 @@ let
     @assert nbits == 32
 end
 
+## malformed subchunk header, GitHub Issue #18
+let
+    # Create a malformed WAV file
+    samples = rand(Float32, (10, 1))
+    io = IOBuffer()
+
+    const compression = WAV.get_default_compression(samples)
+    const nbits = WAV.get_default_precision(samples, compression)
+    const ext = WAV.WAVFormatExtension()
+
+    fmt = WAV.WAVFormat()
+    fmt.compression_code = compression
+    fmt.nchannels = size(samples, 2)
+    fmt.sample_rate = 8000
+    fmt.nbits = ceil(Integer, nbits / 8) * 8
+    fmt.block_align = fmt.nbits / 8 * fmt.nchannels
+    fmt.bps = fmt.sample_rate * fmt.block_align
+    fmt.data_length = size(samples, 1) * fmt.block_align
+
+    WAV.write_header(io, fmt, 37) # 37 instead of 36 is the broken part
+    WAV.write_format(io, fmt)
+
+    # write the data subchunk header
+    WAV.write(io, b"data")
+    WAV.write_le(io, fmt.data_length) # UInt32
+    WAV.write_data(io, fmt, ext, samples)
+
+    seek(io, 0)
+    y, fs, nbits, extra = WAV.wavread(io, format="native")
+    @assert fs == 8000
+    @assert nbits == 32
+    @assert extra == None
+    @assert samples == y
+end
+
 let
     tmp=rand(Float64,(10,2))
     io = IOBuffer()

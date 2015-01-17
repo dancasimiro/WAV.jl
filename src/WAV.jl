@@ -640,11 +640,17 @@ function wavread(io::IO; subrange=None, format="double")
     # Subtract the size of the format field from chunk_size; now it holds the size
     # of all the sub-chunks
     chunk_size -= 4
-    while chunk_size > 0
+    # GitHub Issue #18: Check if there is enough data to read another chunk
+    const subchunk_header_size = 4 + sizeof(UInt32)
+    while chunk_size >= subchunk_header_size
         # Read subchunk ID and size
         subchunk_id = read(io, UInt8, 4)
         subchunk_size = read_le(io, UInt32)
-        chunk_size -= 8 + subchunk_size
+        if subchunk_size > chunk_size
+            chunk_size = 0
+            break
+        end
+        chunk_size -= subchunk_header_size + subchunk_size
         # check the subchunk ID
         if subchunk_id == b"fmt "
             fmt = read_format(io, subchunk_size)
