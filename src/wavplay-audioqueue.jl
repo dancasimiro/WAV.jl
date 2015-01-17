@@ -187,7 +187,7 @@ function enqueueBuffer(userData, buf)
         return false
     end
     const rng = userData.offset:userData.nSamples
-    const samples = sub(userData.samples, rng, :)
+    const samples = sub(userData.samples, rng)
     const samplesEnqueued = AudioQueueEnqueueBuffer(userData.aq, buf, samples)
     userData.offset += samplesEnqueued
     userData.nBuffersEnqueued += 1
