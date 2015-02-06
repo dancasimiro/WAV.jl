@@ -245,6 +245,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
             # sign extend negative values
             if fmt.nbits > 8 && (my_sample & mask > 0)
                 my_sample |= signextend_mask
+                my_sample = signed(my_sample)
             end
             samples[i, j] = convert(eltype(samples), my_sample)
         end
