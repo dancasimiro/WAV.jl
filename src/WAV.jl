@@ -237,7 +237,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
             raw_sample = read(io, UInt8, nbytes)
-            my_sample = convert(UInt, 0)
+            my_sample = unsigned(0)
             for k = 1:nbytes
                 my_sample |= convert(UInt64, raw_sample[k]) << bitshift[k]
             end
@@ -246,7 +246,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
             if fmt.nbits > 8 && (my_sample & mask > 0)
                 my_sample |= signextend_mask
             end
-            samples[i, j] = convert(eltype(samples), my_sample)
+            samples[i, j] = convert(eltype(samples), signed(my_sample))
         end
     end
     samples
