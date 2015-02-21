@@ -19,7 +19,7 @@ end
 
 ## example from README, modified to use an IO buffer
 let
-    x = [0:7999]
+    x = [0:7999;]
     y = sin(2 * pi * x / 8000)
     io = IOBuffer()
     WAV.wavwrite(y, io, Fs=8000)
@@ -102,7 +102,7 @@ end
 
 ## Test wavread and wavwrite
 ## Generate some wav files for writing and reading
-for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,24,32,64), nsamples = convert(Array{Int}, [0, logspace(1, 4, 4)]), nchans = 1:4
+for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,24,32,64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:4
     ## Test wav files
     ## The tolerance is based on the number of bits used to encode the file in wavwrite
     tol = 2.0 / (2.0^nbits - 1)
@@ -253,7 +253,7 @@ for nchans = (1,2,4)
 end
 
 ### Test A-Law and Mu-Law
-for nbits = (8, 16), nsamples = convert(Array{Int}, [0, logspace(1, 4, 4)]), nchans = 1:2, fmt=(WAV.WAVE_FORMAT_ALAW, WAV.WAVE_FORMAT_MULAW)
+for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:2, fmt=(WAV.WAVE_FORMAT_ALAW, WAV.WAVE_FORMAT_MULAW)
     const fs = 8000.0
     const tol = 2.0 / (2.0^6)
     in_data = rand(nsamples, nchans)
@@ -319,7 +319,7 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0, logspace(1, 4, 4)]), nch
 end
 
 ### Test float formatting
-for nbits = (32, 64), nsamples = convert(Array{Int}, [0, logspace(1, 4, 4)]), nchans = 1:2, fmt=(WAV.WAVE_FORMAT_IEEE_FLOAT)
+for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:2, fmt=(WAV.WAVE_FORMAT_IEEE_FLOAT)
     const fs = 8000.0
     const tol = 1e-6
     in_data = rand(nsamples, nchans)
