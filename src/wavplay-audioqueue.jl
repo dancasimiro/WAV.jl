@@ -175,7 +175,7 @@ function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     const result = ccall((:AudioQueueEnqueueBuffer, AudioToolbox),
                          OSStatus,
                          (AudioQueueRef, AudioQueueBufferRef, UInt32, Ptr{Void}),
-                         aq, bufPtr, 0, 0)
+                         aq, bufPtr, 0, &nothing)
     if result != 0
         error("AudioQueueEnqueueBuffer failed with $result")
     end
@@ -259,7 +259,7 @@ function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::Audi
                                     (Ptr{AudioQueueData}, AudioQueueRef, AudioQueueBufferRef))
     const result =
         ccall((:AudioQueueNewOutput, AudioToolbox), OSStatus,
-              (Ptr{AudioStreamBasicDescription}, Ptr{Void}, Ptr{Void}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
+              (Ptr{AudioStreamBasicDescription}, Ptr{Void}, Ptr{AudioQueueData}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
               &format, cCallbackProc, &userData, runLoop, runLoopMode, 0, newAudioQueue)
     if result != 0
         error("AudioQueueNewOutput failed with $result")
@@ -288,8 +288,10 @@ end
 #     referenced to the sample frame timeline of the associated audio device. May be NULL.
 # @result     An OSStatus result code.
 function AudioQueueStart(aq)
+    # The second parameter of AudioQueueStart is "AudioTimeStamp," but I don't know how
+    # to pass a "NULL" AudioTimeStamp pointer.
     const result = ccall((:AudioQueueStart, AudioToolbox), OSStatus,
-                         (AudioQueueRef, Ptr{AudioTimeStamp}), aq, 0)
+                         (AudioQueueRef, Ptr{Void}), aq, &nothing)
     if result != 0
         error("AudioQueueStart failed with $result")
     end
