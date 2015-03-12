@@ -115,6 +115,9 @@ are the following.
 | 24     | single or double |  –1.0 <= y < +1.0  | int32         |
 | 32     | single or double |  –1.0 <= y <= +1.0 | single        |
 
+Floating point (single and double precision) values are written to the
+file unaltered. The library will not modify the data range or representation.
+
 The following functions are also defined to make this function
 compatible with MATLAB:
 

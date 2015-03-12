@@ -579,12 +579,10 @@ function write_pcm_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Ar
 end
 
 function write_ieee_float_samples(io::IO, samples, floatType)
-    const minval = convert(floatType, -1.0)
-    const maxval = convert(floatType, 1.0)
     # Interleave the channel samples before writing to the stream.
     for i = 1:size(samples, 1) # for each sample
         for j = 1:size(samples, 2) # for each channel
-            write_le(io, clamp(samples[i, j], minval, maxval))
+            write_le(io, samples[i, j])
         end
     end
 end

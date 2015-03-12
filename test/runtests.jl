@@ -237,7 +237,7 @@ for nchans = (1,2,4)
     @assert in_data_single == out_data_single
 end
 
-## Test encoding 32 bit values outside the valid range
+## Test encoding 32 bit values outside the [-1, 1] range
 for nchans = (1,2,4)
     nsamps = int(128 / nchans)
     in_data_single = convert(Array{Float32}, reshape(-63:64, nsamps, nchans))
@@ -249,7 +249,36 @@ for nchans = (1,2,4)
     @assert fs == 8000
     @assert nbits == 32
     @assert extra == None
-    @assert [clamp(in_data_single[i, j], float32(-1), float32(1)) for i = 1:nsamps, j = 1:nchans] == out_data_single
+    @assert [in_data_single[i, j] for i = 1:nsamps, j = 1:nchans] == out_data_single
+end
+
+## Test encoding 64 bit values
+for nchans = (1,2,4)
+    in_data_single = convert(Array{Float64}, reshape(linspace(-1.0, 1.0, 128), int(128 / nchans), nchans))
+    io = IOBuffer()
+    WAV.wavwrite(in_data_single, io)
+
+    seek(io, 0)
+    out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
+    @assert fs == 8000
+    @assert nbits == 64
+    @assert extra == None
+    @assert in_data_single == out_data_single
+end
+
+## Test encoding 64 bit values outside the [-1, 1] range
+for nchans = (1,2,4)
+    nsamps = int(128 / nchans)
+    in_data_single = convert(Array{Float64}, reshape(-63:64, nsamps, nchans))
+    io = IOBuffer()
+    WAV.wavwrite(in_data_single, io)
+
+    seek(io, 0)
+    out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
+    @assert fs == 8000
+    @assert nbits == 64
+    @assert extra == None
+    @assert [in_data_single[i, j] for i = 1:nsamps, j = 1:nchans] == out_data_single
 end
 
 ### Test A-Law and Mu-Law
