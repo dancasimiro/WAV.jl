@@ -331,7 +331,7 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @assert out_fs == fs
         @assert out_nbits == 8
         @assert out_extra == None
-        @assert absdiff(out_data, in_data[1:int(subsamples), :]) < tol
+        @assert absdiff(out_data, in_data[1:Int(subsamples), :]) < tol
 
         seek(io, 0)
         sr = convert(Int, min(5, trunc(Int, nsamples / 2))):convert(Int, min(23, nsamples - 1))
@@ -397,7 +397,7 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
         @assert out_fs == fs
         @assert out_nbits == nbits
         @assert out_extra == None
-        @assert absdiff(out_data, in_data[1:int(subsamples), :]) < tol
+        @assert absdiff(out_data, in_data[1:Int(subsamples), :]) < tol
 
         seek(io, 0)
         sr = convert(Int, min(5, trunc(Int, nsamples / 2))):convert(Int, min(23, nsamples - 1))
