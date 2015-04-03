@@ -51,7 +51,7 @@ let
 
     const compression = WAV.get_default_compression(samples)
     const nbits = WAV.get_default_precision(samples, compression)
-    const ext = WAV.WAVFormatExtension()
+    const ext = WAV.WAVFormatExtension(0, 0, [])
 
     fmt = WAV.WAVFormat()
     fmt.compression_code = compression

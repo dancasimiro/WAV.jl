@@ -89,13 +89,10 @@ const WAVE_FORMAT_MULAW      = 0x0007 # Mu-Law
 const WAVE_FORMAT_EXTENSIBLE = 0xfffe # Extension!
 
 # used by WAVE_FORMAT_EXTENSIBLE
-type WAVFormatExtension
+immutable WAVFormatExtension
     valid_bits_per_sample::UInt16
     channel_mask::UInt32
     sub_format::Array{UInt8, 1} # 16 byte GUID
-
-    WAVFormatExtension() = new(0, 0, b"")
-    WAVFormatExtension(vbsp, cm, sb) = new(vbsp, cm, sb)
 end
 
 # DEFINE_GUIDSTRUCT("00000001-0000-0010-8000-00aa00389b71", KSDATAFORMAT_SUBTYPE_PCM);
@@ -714,22 +711,24 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
     fmt.bps = fmt.sample_rate * fmt.block_align
     fmt.data_length = size(samples, 1) * fmt.block_align
 
-    ext = WAVFormatExtension()
+    ext = WAVFormatExtension(0, 0, [])
     if fmt.nchannels > 2 || fmt.nbits > 16 || fmt.nbits != nbits
         fmt.compression_code = WAVE_FORMAT_EXTENSIBLE
-        ext.valid_bits_per_sample = nbits
-        ext.channel_mask = 0
+        const valid_bits_per_sample = nbits
+        const channel_mask = 0
+        sub_format = []
         if compression == WAVE_FORMAT_PCM
-            ext.sub_format = KSDATAFORMAT_SUBTYPE_PCM
+            sub_format = KSDATAFORMAT_SUBTYPE_PCM
         elseif compression == WAVE_FORMAT_IEEE_FLOAT
-            ext.sub_format = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
+            sub_format = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
         elseif compression == WAVE_FORMAT_ALAW
-            ext.sub_format = KSDATAFORMAT_SUBTYPE_ALAW
+            sub_format = KSDATAFORMAT_SUBTYPE_ALAW
         elseif compression == WAVE_FORMAT_MULAW
-            ext.sub_format = KSDATAFORMAT_SUBTYPE_MULAW
+            sub_format = KSDATAFORMAT_SUBTYPE_MULAW
         else
             error("Unsupported extension sub format: $compression")
         end
+        ext = WAVFormatExtension(valid_bits_per_sample, channel_mask, sub_format)
         write_extended_header(io, fmt)
         write_format(io, fmt, ext)
     else
