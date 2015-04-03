@@ -76,10 +76,8 @@ type WAVFormat
     nbits::UInt16
     extra_bytes::Array{UInt8, 1}
 
-    data_length::UInt32
-
-    WAVFormat() = new(0, 0, 0, 0, 0, 0, [], 0)
-    WAVFormat(comp, chan, fs, bytes, ba, nbits) = new(comp, chan, fs, bytes, ba, nbits, [], 0)
+    WAVFormat() = new(0, 0, 0, 0, 0, 0, [])
+    WAVFormat(comp, chan, fs, bytes, ba, nbits) = new(comp, chan, fs, bytes, ba, nbits, [])
 end
 
 const WAVE_FORMAT_PCM        = 0x0001 # PCM
@@ -156,13 +154,13 @@ function read_header(io::IO)
     return chunk_size
 end
 
-function write_header(io::IO, fmt::WAVFormat, base_chunk_size)
+function write_header(io::IO, fmt::WAVFormat, data_length::UInt32)
     write(io, b"RIFF") # RIFF header
-    write_le(io, convert(UInt32, base_chunk_size + fmt.data_length)) # chunk_size
+    write_le(io, data_length) # chunk_size
     write(io, b"WAVE")
 end
-write_standard_header(io, fmt) = write_header(io, fmt, 36)
-write_extended_header(io, fmt) = write_header(io, fmt, 60)
+write_standard_header(io, fmt, data_length) = write_header(io, fmt, data_length + UInt32(36))
+write_extended_header(io, fmt, data_length) = write_header(io, fmt, data_length + UInt32(60))
 
 function read_format(io::IO, chunk_size::UInt32)
     # can I read in all of the fields at once?
@@ -709,7 +707,7 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
     fmt.nbits = ceil(Integer, nbits / 8) * 8
     fmt.block_align = fmt.nbits / 8 * fmt.nchannels
     fmt.bps = fmt.sample_rate * fmt.block_align
-    fmt.data_length = size(samples, 1) * fmt.block_align
+    const data_length::UInt32 = size(samples, 1) * fmt.block_align
 
     ext = WAVFormatExtension(0, 0, [])
     if fmt.nchannels > 2 || fmt.nbits > 16 || fmt.nbits != nbits
@@ -729,16 +727,16 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
             error("Unsupported extension sub format: $compression")
         end
         ext = WAVFormatExtension(valid_bits_per_sample, channel_mask, sub_format)
-        write_extended_header(io, fmt)
+        write_extended_header(io, fmt, data_length)
         write_format(io, fmt, ext)
     else
-        write_standard_header(io, fmt)
+        write_standard_header(io, fmt, data_length)
         write_format(io, fmt)
     end
 
     # write the data subchunk header
     write(io, b"data")
-    write_le(io, fmt.data_length) # UInt32
+    write_le(io, data_length) # UInt32
     write_data(io, fmt, ext, samples)
 end
 
@@ -765,15 +763,15 @@ function wavappend(samples::Array, io::IO)
         error("Number of channels do not match")
     end
 
-    fmt.data_length = size(samples, 1) * fmt.block_align
+    const data_length = size(samples, 1) * fmt.block_align
 
     seek(io,4)
-    write_le(io, convert(UInt32, chunk_size + fmt.data_length))
+    write_le(io, convert(UInt32, chunk_size + data_length))
 
     seek(io,64)
     subchunk_size = read_le(io, UInt32)
     seek(io,64)
-    write_le(io, convert(UInt32, subchunk_size + fmt.data_length))
+    write_le(io, convert(UInt32, subchunk_size + data_length))
 
     seekend(io)
     write_data(io, fmt, ext, samples)

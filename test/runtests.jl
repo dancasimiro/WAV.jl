@@ -60,14 +60,14 @@ let
     fmt.nbits = ceil(Integer, nbits / 8) * 8
     fmt.block_align = fmt.nbits / 8 * fmt.nchannels
     fmt.bps = fmt.sample_rate * fmt.block_align
-    fmt.data_length = size(samples, 1) * fmt.block_align
+    const data_length::UInt32 = size(samples, 1) * fmt.block_align
 
-    WAV.write_header(io, fmt, 37) # 37 instead of 36 is the broken part
+    WAV.write_header(io, fmt, data_length + UInt32(37)) # 37 instead of 36 is the broken part
     WAV.write_format(io, fmt)
 
     # write the data subchunk header
     WAV.write(io, b"data")
-    WAV.write_le(io, fmt.data_length) # UInt32
+    WAV.write_le(io, data_length) # UInt32
     WAV.write_data(io, fmt, ext, samples)
 
     seek(io, 0)
