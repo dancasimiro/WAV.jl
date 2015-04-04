@@ -68,7 +68,7 @@ read_le(stream::IO, ::Type{Float64}) = box(Float64, unbox(UInt64, read_le(stream
 
 # used by WAVE_FORMAT_EXTENSIBLE
 immutable WAVFormatExtension
-    valid_bits_per_sample::UInt16
+    nbits::UInt16 # overrides nbits in WAVFormat type
     channel_mask::UInt32
     sub_format::Array{UInt8, 1} # 16 byte GUID
     WAVFormatExtension() = new(0, 0, Array(UInt8, 0))
@@ -97,7 +97,7 @@ const WAVE_FORMAT_MULAW      = 0x0007 # Mu-Law
 const WAVE_FORMAT_EXTENSIBLE = 0xfffe # Extension!
 
 isextensible(fmt::WAVFormat) = (fmt.compression_code == WAVE_FORMAT_EXTENSIBLE)
-bits_per_sample(fmt::WAVFormat) = isextensible(fmt) ? fmt.ext.valid_bits_per_sample : fmt.nbits
+bits_per_sample(fmt::WAVFormat) = isextensible(fmt) ? fmt.ext.nbits : fmt.nbits
 
 # DEFINE_GUIDSTRUCT("00000001-0000-0010-8000-00aa00389b71", KSDATAFORMAT_SUBTYPE_PCM);
 const KSDATAFORMAT_SUBTYPE_PCM = [
@@ -206,7 +206,7 @@ function write_format(io::IO, fmt::WAVFormat)
 
     if isextensible(fmt)
         write_le(io, convert(UInt16, 22))
-        write_le(io, fmt.ext.valid_bits_per_sample)
+        write_le(io, fmt.ext.nbits)
         write_le(io, fmt.ext.channel_mask)
         @assert length(fmt.ext.sub_format) == 16
         write(io, fmt.ext.sub_format)
