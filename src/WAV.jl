@@ -527,7 +527,7 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
         end
     elseif fmt.compression_code == WAVE_FORMAT_PCM
         samples = read_pcm_samples(io, fmt, subrange)
-        convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
+        convert_to_double = x -> convert_pcm_to_double(x, bits_per_sample(fmt))
     elseif fmt.compression_code == WAVE_FORMAT_IEEE_FLOAT
         samples = read_ieee_float_samples(io, fmt, subrange)
     elseif fmt.compression_code == WAVE_FORMAT_MULAW
