@@ -261,7 +261,8 @@ function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, floatType)
     end
     const nblocks = length(subrange)
     samples = Array(floatType, nblocks, fmt.nchannels)
-    skip(io, convert(UInt, (first(subrange) - 1) * (fmt.nbits / 8) * fmt.nchannels))
+    const nbits = bits_per_sample(fmt)
+    skip(io, convert(UInt, (first(subrange) - 1) * (nbits / 8) * fmt.nchannels))
     for i = 1:nblocks
         for j = 1:fmt.nchannels
             samples[i, j] = read_le(io, floatType)
@@ -272,7 +273,7 @@ end
 
 # take the loop variable type out of the loop
 function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange)
-    const floatType = ieee_float_container_type(fmt.nbits)
+    const floatType = ieee_float_container_type(bits_per_sample(fmt))
     read_ieee_float_samples(io, fmt, subrange, floatType)
 end
 
@@ -516,7 +517,6 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
             samples = read_pcm_samples(io, fmt, subrange)
             convert_to_double = x -> convert_pcm_to_double(x, bits_per_sample(fmt))
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-            fmt.nbits = fmt.ext.valid_bits_per_sample
             samples = read_ieee_float_samples(io, fmt, subrange)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
             fmt.nbits = 8
