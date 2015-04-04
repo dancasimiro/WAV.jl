@@ -66,6 +66,13 @@ end
 read_le(stream::IO, ::Type{Float32}) = box(Float32, unbox(UInt32, read_le(stream, UInt32)))
 read_le(stream::IO, ::Type{Float64}) = box(Float64, unbox(UInt64, read_le(stream, UInt64)))
 
+# used by WAVE_FORMAT_EXTENSIBLE
+immutable WAVFormatExtension
+    valid_bits_per_sample::UInt16
+    channel_mask::UInt32
+    sub_format::Array{UInt8, 1} # 16 byte GUID
+end
+
 # Required WAV Chunk; The format chunk describes how the waveform data is stored
 type WAVFormat
     compression_code::UInt16
@@ -74,10 +81,11 @@ type WAVFormat
     bps::UInt32 # average bytes per second
     block_align::UInt16
     nbits::UInt16
-    extra_bytes::Array{UInt8, 1}
+    ext::WAVFormatExtension
 
-    WAVFormat() = new(0, 0, 0, 0, 0, 0, [])
-    WAVFormat(comp, chan, fs, bytes, ba, nbits) = new(comp, chan, fs, bytes, ba, nbits, [])
+    WAVFormat() = new(0, 0, 0, 0, 0, 0, WAVFormatExtension(0, 0, []))
+    WAVFormat(comp, chan, fs, bytes, ba, nbits) = new(comp, chan, fs, bytes, ba, nbits,
+                                                      WAVFormatExtension(0, 0, []))
 end
 
 const WAVE_FORMAT_PCM        = 0x0001 # PCM
@@ -86,12 +94,7 @@ const WAVE_FORMAT_ALAW       = 0x0006 # A-Law
 const WAVE_FORMAT_MULAW      = 0x0007 # Mu-Law
 const WAVE_FORMAT_EXTENSIBLE = 0xfffe # Extension!
 
-# used by WAVE_FORMAT_EXTENSIBLE
-immutable WAVFormatExtension
-    valid_bits_per_sample::UInt16
-    channel_mask::UInt32
-    sub_format::Array{UInt8, 1} # 16 byte GUID
-end
+isextensible(fmt::WAVFormat) = (fmt.compression_code == WAVE_FORMAT_EXTENSIBLE)
 
 # DEFINE_GUIDSTRUCT("00000001-0000-0010-8000-00aa00389b71", KSDATAFORMAT_SUBTYPE_PCM);
 const KSDATAFORMAT_SUBTYPE_PCM = [
@@ -154,13 +157,13 @@ function read_header(io::IO)
     return chunk_size
 end
 
-function write_header(io::IO, fmt::WAVFormat, data_length::UInt32)
+function write_header(io::IO, data_length::UInt32)
     write(io, b"RIFF") # RIFF header
     write_le(io, data_length) # chunk_size
     write(io, b"WAVE")
 end
-write_standard_header(io, fmt, data_length) = write_header(io, fmt, data_length + UInt32(36))
-write_extended_header(io, fmt, data_length) = write_header(io, fmt, data_length + UInt32(60))
+write_standard_header(io, data_length) = write_header(io, data_length + UInt32(36))
+write_extended_header(io, data_length) = write_header(io, data_length + UInt32(60))
 
 function read_format(io::IO, chunk_size::UInt32)
     # can I read in all of the fields at once?
@@ -176,17 +179,20 @@ function read_format(io::IO, chunk_size::UInt32)
                        read_le(io, UInt16)) # bits per sample
     chunk_size -= 16
     if chunk_size > 0
-        # TODO add error checking for size mismatches
-        extra_bytes = read_le(io, UInt16)
-        format.extra_bytes = read(io, UInt8, extra_bytes)
+        const extra_bytes_length = read_le(io, UInt16)
+        format.ext = WAVFormatExtension(read(io, UInt8, extra_bytes_length))
     end
     return format
 end
 
-function write_format(io::IO, fmt::WAVFormat, ext_length::Integer)
+function write_format(io::IO, fmt::WAVFormat)
+    len = 16 # 16 is size of base format chunk
+    if isextensible(fmt)
+        len += 24 # 24 is the added length needed to encode the extension
+    end
     # write the fmt subchunk header
     write(io, b"fmt ")
-    write_le(io, convert(UInt32, 16 + ext_length)) # subchunk length; 16 is size of base format chunk
+    write_le(io, convert(UInt32, len)) # subchunk length
 
     write_le(io, fmt.compression_code) # audio format (UInt16)
     write_le(io, fmt.nchannels) # number of channels (UInt16)
@@ -194,16 +200,14 @@ function write_format(io::IO, fmt::WAVFormat, ext_length::Integer)
     write_le(io, fmt.bps) # byte rate (UInt32)
     write_le(io, fmt.block_align) # byte align (UInt16)
     write_le(io, fmt.nbits) # number of bits per sample (UInt16)
-end
-write_format(io::IO, fmt::WAVFormat) = write_format(io, fmt, 0)
 
-function write_format(io::IO, fmt::WAVFormat, ext::WAVFormatExtension)
-    write_format(io, fmt, 24) # 24 is the added length needed to encode the extension
-    write_le(io, convert(UInt16, 22))
-    write_le(io, ext.valid_bits_per_sample)
-    write_le(io, ext.channel_mask)
-    @assert length(ext.sub_format) == 16
-    write(io, ext.sub_format)
+    if isextensible(fmt)
+        write_le(io, convert(UInt16, 22))
+        write_le(io, fmt.ext.valid_bits_per_sample)
+        write_le(io, fmt.ext.channel_mask)
+        @assert length(fmt.ext.sub_format) == 16
+        write(io, fmt.ext.sub_format)
+    end
 end
 
 function pcm_container_type(nbits::Unsigned)
@@ -504,22 +508,21 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
         subrange = 1:convert(UInt, chunk_size / fmt.block_align)
     end
     if fmt.compression_code == WAVE_FORMAT_EXTENSIBLE
-        ext_fmt = WAVFormatExtension(fmt.extra_bytes)
-        if ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_PCM
-            fmt.nbits = ext_fmt.valid_bits_per_sample
+        if fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_PCM
+            fmt.nbits = fmt.ext.valid_bits_per_sample
             samples = read_pcm_samples(io, fmt, subrange)
             convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
-        elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-            fmt.nbits = ext_fmt.valid_bits_per_sample
+        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
+            fmt.nbits = fmt.ext.valid_bits_per_sample
             samples = read_ieee_float_samples(io, fmt, subrange)
-        elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
+        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
             fmt.nbits = 8
             samples = read_alaw_samples(io, fmt, subrange)
-        elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
+        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
             fmt.nbits = 8
             samples = read_mulaw_samples(io, fmt, subrange)
         else
-            error("$ext_fmt -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
+            error("$(fmt.ext) -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
         end
     elseif fmt.compression_code == WAVE_FORMAT_PCM
         samples = read_pcm_samples(io, fmt, subrange)
@@ -573,7 +576,7 @@ function write_pcm_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Ar
     return write_pcm_samples(io, fmt, samples)
 end
 
-function write_ieee_float_samples(io::IO, samples, floatType)
+function write_ieee_float_samples(io::IO, samples)
     # Interleave the channel samples before writing to the stream.
     for i = 1:size(samples, 1) # for each sample
         for j = 1:size(samples, 2) # for each channel
@@ -585,25 +588,25 @@ end
 # take the loop variable type out of the loop
 function write_ieee_float_samples(io::IO, fmt::WAVFormat, samples)
     const floatType = ieee_float_container_type(fmt.nbits)
-    write_ieee_float_samples(io, convert(Array{floatType}, samples), floatType)
+    write_ieee_float_samples(io, convert(Array{floatType}, samples))
 end
 
-function write_data(io::IO, fmt::WAVFormat, ext_fmt::WAVFormatExtension, samples::Array)
+function write_data(io::IO, fmt::WAVFormat, samples::Array)
     if fmt.compression_code == WAVE_FORMAT_EXTENSIBLE
-        if ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_PCM
-            fmt.nbits = ext_fmt.valid_bits_per_sample
+        if fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_PCM
+            fmt.nbits = fmt.ext.valid_bits_per_sample
             return write_pcm_samples(io, fmt, samples)
-        elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-            fmt.nbits = ext_fmt.valid_bits_per_sample
+        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
+            fmt.nbits = fmt.ext.valid_bits_per_sample
             return write_ieee_float_samples(io, fmt, samples)
-        elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
+        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
             fmt.nbits = 8
             return write_companded_samples(io, samples, compress_sample_alaw)
-        elseif ext_fmt.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
+        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
             fmt.nbits = 8
             return write_companded_samples(io, samples, compress_sample_mulaw)
         else
-            error("$ext_fmt -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
+            error("$(fmt.ext) -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
         end
     elseif fmt.compression_code == WAVE_FORMAT_PCM
         return write_pcm_samples(io, fmt, samples)
@@ -709,7 +712,6 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
     fmt.bps = fmt.sample_rate * fmt.block_align
     const data_length::UInt32 = size(samples, 1) * fmt.block_align
 
-    ext = WAVFormatExtension(0, 0, [])
     if fmt.nchannels > 2 || fmt.nbits > 16 || fmt.nbits != nbits
         fmt.compression_code = WAVE_FORMAT_EXTENSIBLE
         const valid_bits_per_sample = nbits
@@ -726,18 +728,17 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
         else
             error("Unsupported extension sub format: $compression")
         end
-        ext = WAVFormatExtension(valid_bits_per_sample, channel_mask, sub_format)
-        write_extended_header(io, fmt, data_length)
-        write_format(io, fmt, ext)
+        fmt.ext = WAVFormatExtension(valid_bits_per_sample, channel_mask, sub_format)
+        write_extended_header(io, data_length)
     else
-        write_standard_header(io, fmt, data_length)
-        write_format(io, fmt)
+        write_standard_header(io, data_length)
     end
+    write_format(io, fmt)
 
     # write the data subchunk header
     write(io, b"data")
     write_le(io, data_length) # UInt32
-    write_data(io, fmt, ext, samples)
+    write_data(io, fmt, samples)
 end
 
 function wavwrite(samples::Array, filename::String; Fs=8000, nbits=0, compression=0)
@@ -757,7 +758,6 @@ function wavappend(samples::Array, io::IO)
         error("First chunk is not the format")
     end
     fmt = read_format(io, subchunk_size)
-    ext = WAVFormatExtension(fmt.extra_bytes)
 
     if fmt.nchannels != size(samples,2)
         error("Number of channels do not match")
@@ -774,7 +774,7 @@ function wavappend(samples::Array, io::IO)
     write_le(io, convert(UInt32, subchunk_size + data_length))
 
     seekend(io)
-    write_data(io, fmt, ext, samples)
+    write_data(io, fmt, samples)
 end
 
 function wavappend(samples::Array, filename::String)

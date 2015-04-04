@@ -51,7 +51,6 @@ let
 
     const compression = WAV.get_default_compression(samples)
     const nbits = WAV.get_default_precision(samples, compression)
-    const ext = WAV.WAVFormatExtension(0, 0, [])
 
     fmt = WAV.WAVFormat()
     fmt.compression_code = compression
@@ -62,13 +61,13 @@ let
     fmt.bps = fmt.sample_rate * fmt.block_align
     const data_length::UInt32 = size(samples, 1) * fmt.block_align
 
-    WAV.write_header(io, fmt, data_length + UInt32(37)) # 37 instead of 36 is the broken part
+    WAV.write_header(io, data_length + UInt32(37)) # 37 instead of 36 is the broken part
     WAV.write_format(io, fmt)
 
     # write the data subchunk header
     WAV.write(io, b"data")
     WAV.write_le(io, data_length) # UInt32
-    WAV.write_data(io, fmt, ext, samples)
+    WAV.write_data(io, fmt, samples)
 
     seek(io, 0)
     y, fs, nbits, extra = WAV.wavread(io, format="native")
