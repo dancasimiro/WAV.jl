@@ -163,8 +163,8 @@ function write_header(io::IO, data_length::UInt32)
     write_le(io, data_length) # chunk_size
     write(io, b"WAVE")
 end
-write_standard_header(io, data_length) = write_header(io, data_length + UInt32(36))
-write_extended_header(io, data_length) = write_header(io, data_length + UInt32(60))
+write_standard_header(io, data_length) = write_header(io, data_length + @compat UInt32(36))
+write_extended_header(io, data_length) = write_header(io, data_length + @compat UInt32(60))
 
 function read_format(io::IO, chunk_size::UInt32)
     # can I read in all of the fields at once?
