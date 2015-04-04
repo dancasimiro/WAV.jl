@@ -590,7 +590,7 @@ end
 
 # take the loop variable type out of the loop
 function write_ieee_float_samples(io::IO, fmt::WAVFormat, samples)
-    const floatType = ieee_float_container_type(fmt.nbits)
+    const floatType = ieee_float_container_type(bits_per_sample(fmt))
     write_ieee_float_samples(io, convert(Array{floatType}, samples))
 end
 
@@ -599,7 +599,6 @@ function write_data(io::IO, fmt::WAVFormat, samples::Array)
         if fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_PCM
             return write_pcm_samples(io, fmt, samples)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-            fmt.nbits = fmt.ext.valid_bits_per_sample
             return write_ieee_float_samples(io, fmt, samples)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
             fmt.nbits = 8
