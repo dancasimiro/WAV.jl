@@ -76,7 +76,7 @@ immutable WAVFormatExtension
 end
 
 # Required WAV Chunk; The format chunk describes how the waveform data is stored
-type WAVFormat
+immutable WAVFormat
     compression_code::UInt16
     nchannels::UInt16
     sample_rate::UInt32
@@ -84,10 +84,6 @@ type WAVFormat
     block_align::UInt16
     nbits::UInt16
     ext::WAVFormatExtension
-
-    WAVFormat() = new(0, 0, 0, 0, 0, 0, WAVFormatExtension())
-    WAVFormat(comp, chan, fs, bytes, ba, nbits) = new(comp, chan, fs, bytes, ba, nbits,
-                                                      WAVFormatExtension())
 end
 
 const WAVE_FORMAT_PCM        = 0x0001 # PCM
@@ -133,8 +129,8 @@ const KSDATAFORMAT_SUBTYPE_ALAW = [
                                    ]
 
 function WAVFormatExtension(bytes::Array{UInt8})
-    if length(bytes) != 22
-        error("There are not the right number of bytes for the WAVFormat Extension")
+    if isempty(bytes)
+        return WAVFormatExtension()
     end
     # split bytes into valid_bits_per_sample, channel_mask, and sub_format
     valid_bits_per_sample = (convert(UInt16, bytes[2]) << 8) | convert(UInt16, bytes[1])
@@ -174,18 +170,27 @@ function read_format(io::IO, chunk_size::UInt32)
     if chunk_size < 16
         error("The WAVE Format chunk must be at least 16 bytes")
     end
-    format = WAVFormat(read_le(io, UInt16), # Compression Code
-                       read_le(io, UInt16), # Number of Channels
-                       read_le(io, UInt32), # Sample Rate
-                       read_le(io, UInt32), # bytes per second
-                       read_le(io, UInt16), # block align
-                       read_le(io, UInt16)) # bits per sample
+    const compression_code = read_le(io, UInt16)
+    const nchannels = read_le(io, UInt16)
+    const sample_rate = read_le(io, UInt32)
+    const bytes_per_second = read_le(io, UInt32)
+    const block_align = read_le(io, UInt16)
+    const nbits = read_le(io, UInt16)
+    ext = Array(UInt8, 0)
     chunk_size -= 16
     if chunk_size > 0
         const extra_bytes_length = read_le(io, UInt16)
-        format.ext = WAVFormatExtension(read(io, UInt8, extra_bytes_length))
+        if extra_bytes_length == 22
+            ext = read(io, UInt8, extra_bytes_length)
+        end
     end
-    return format
+    return WAVFormat(compression_code,
+                     nchannels,
+                     sample_rate,
+                     bytes_per_second,
+                     block_align,
+                     nbits,
+                     WAVFormatExtension(ext))
 end
 
 function write_format(io::IO, fmt::WAVFormat)
@@ -626,8 +631,9 @@ make_range(subrange::Range1) = convert(Range1{Int}, subrange)
 
 function wavread(io::IO; subrange=None, format="double")
     chunk_size = read_header(io)
-    fmt = WAVFormat()
     samples = Array(Float64)
+    nbits = 0
+    sample_rate = 0
 
     # Note: This assumes that the format chunk is written in the file before the data chunk. The
     # specification does not require this assumption, but most real files are written that way.
@@ -649,6 +655,8 @@ function wavread(io::IO; subrange=None, format="double")
         # check the subchunk ID
         if subchunk_id == b"fmt "
             fmt = read_format(io, subchunk_size)
+            sample_rate = fmt.sample_rate
+            nbits = bits_per_sample(fmt)
         elseif subchunk_id == b"data"
             if format == "size"
                 return convert(Int, subchunk_size / fmt.block_align), convert(Int, fmt.nchannels)
@@ -660,7 +668,7 @@ function wavread(io::IO; subrange=None, format="double")
             skip(io, subchunk_size)
         end
     end
-    return samples, fmt.sample_rate, bits_per_sample(fmt), None
+    return samples, sample_rate, nbits, None
 end
 
 function wavread(filename::String; subrange=None, format="double")
@@ -702,17 +710,17 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
     if nbits == 0
         nbits = get_default_precision(samples, compression)
     end
-    fmt = WAVFormat()
-    fmt.compression_code = compression
-    fmt.nchannels = size(samples, 2)
-    fmt.sample_rate = Fs
-    fmt.nbits = ceil(Integer, nbits / 8) * 8
-    fmt.block_align = fmt.nbits / 8 * fmt.nchannels
-    fmt.bps = fmt.sample_rate * fmt.block_align
-    const data_length::UInt32 = size(samples, 1) * fmt.block_align
+    compression_code = compression
+    const nchannels = size(samples, 2)
+    const sample_rate = Fs
+    const my_nbits = ceil(Integer, nbits / 8) * 8
+    const block_align = my_nbits / 8 * nchannels
+    const bps = sample_rate * block_align
+    const data_length::UInt32 = size(samples, 1) * block_align
+    ext = WAVFormatExtension()
 
-    if fmt.nchannels > 2 || fmt.nbits > 16 || fmt.nbits != nbits
-        fmt.compression_code = WAVE_FORMAT_EXTENSIBLE
+    if nchannels > 2 || my_nbits > 16 || my_nbits != nbits
+        compression_code = WAVE_FORMAT_EXTENSIBLE
         const valid_bits_per_sample = nbits
         const channel_mask = 0
         sub_format = Array(UInt8, 0)
@@ -727,11 +735,18 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
         else
             error("Unsupported extension sub format: $compression")
         end
-        fmt.ext = WAVFormatExtension(valid_bits_per_sample, channel_mask, sub_format)
+        ext = WAVFormatExtension(valid_bits_per_sample, channel_mask, sub_format)
         write_extended_header(io, data_length)
     else
         write_standard_header(io, data_length)
     end
+    fmt = WAVFormat(compression_code,
+                    nchannels,
+                    sample_rate,
+                    bps,
+                    block_align,
+                    my_nbits,
+                    ext)
     write_format(io, fmt)
 
     # write the data subchunk header

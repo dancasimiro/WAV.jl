@@ -50,16 +50,22 @@ let
     io = IOBuffer()
 
     const compression = WAV.get_default_compression(samples)
-    const nbits = WAV.get_default_precision(samples, compression)
+    nbits = WAV.get_default_precision(samples, compression)
 
-    fmt = WAV.WAVFormat()
-    fmt.compression_code = compression
-    fmt.nchannels = size(samples, 2)
-    fmt.sample_rate = 8000
-    fmt.nbits = ceil(Integer, nbits / 8) * 8
-    fmt.block_align = fmt.nbits / 8 * fmt.nchannels
-    fmt.bps = fmt.sample_rate * fmt.block_align
-    const data_length::UInt32 = size(samples, 1) * fmt.block_align
+    const nchannels = size(samples, 2)
+    const sample_rate = 8000
+    nbits = ceil(Integer, nbits / 8) * 8
+    const block_align = nbits / 8 * nchannels
+    const bps = sample_rate * block_align
+    const data_length::UInt32 = size(samples, 1) * block_align
+
+    const fmt = WAV.WAVFormat(compression,
+                              nchannels,
+                              sample_rate,
+                              bps,
+                              block_align,
+                              nbits,
+                              WAV.WAVFormatExtension())
 
     WAV.write_header(io, data_length + UInt32(37)) # 37 instead of 36 is the broken part
     WAV.write_format(io, fmt)
