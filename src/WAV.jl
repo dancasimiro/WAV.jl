@@ -227,14 +227,15 @@ end
 ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
 function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
+    const nbits = bits_per_sample(fmt)
     if isempty(subrange)
-        return Array(pcm_container_type(fmt.nbits), 0, fmt.nchannels)
+        return Array(pcm_container_type(nbits), 0, fmt.nchannels)
     end
-    samples = Array(pcm_container_type(fmt.nbits), length(subrange), fmt.nchannels)
-    const nbytes = ceil(Integer, fmt.nbits / 8)
+    samples = Array(pcm_container_type(nbits), length(subrange), fmt.nchannels)
+    const nbytes = ceil(Integer, nbits / 8)
     const bitshift::Array{UInt} = linspace(0, 64, 9)
-    const mask = unsigned(1) << (fmt.nbits - 1)
-    const signextend_mask = ~unsigned(0) << fmt.nbits
+    const mask = unsigned(1) << (nbits - 1)
+    const signextend_mask = ~unsigned(0) << nbits
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
@@ -243,9 +244,9 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
             for k = 1:nbytes
                 my_sample |= convert(UInt64, raw_sample[k]) << bitshift[k]
             end
-            my_sample >>= nbytes * 8 - fmt.nbits
+            my_sample >>= nbytes * 8 - nbits
             # sign extend negative values
-            if fmt.nbits > 8 && (my_sample & mask > 0)
+            if nbits > 8 && (my_sample & mask > 0)
                 my_sample |= signextend_mask
             end
             samples[i, j] = convert(eltype(samples), signed(my_sample))
@@ -512,9 +513,8 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
     end
     if fmt.compression_code == WAVE_FORMAT_EXTENSIBLE
         if fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_PCM
-            fmt.nbits = fmt.ext.valid_bits_per_sample
             samples = read_pcm_samples(io, fmt, subrange)
-            convert_to_double = x -> convert_pcm_to_double(x, fmt.nbits)
+            convert_to_double = x -> convert_pcm_to_double(x, bits_per_sample(fmt))
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
             fmt.nbits = fmt.ext.valid_bits_per_sample
             samples = read_ieee_float_samples(io, fmt, subrange)
@@ -664,7 +664,7 @@ function wavread(io::IO; subrange=None, format="double")
             skip(io, subchunk_size)
         end
     end
-    return samples, fmt.sample_rate, fmt.nbits, None
+    return samples, fmt.sample_rate, bits_per_sample(fmt), None
 end
 
 function wavread(filename::String; subrange=None, format="double")
