@@ -367,7 +367,7 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @test WAV.bits_per_sample(out_extra[:fmt]) == 8
         @test out_extra[:fmt].nchannels == nchans
         @test out_extra[:fmt].compression_code == fmt
-        @assert absdiff(out_data, in_data[1:Int(subsamples), :]) < tol
+        @assert absdiff(out_data, in_data[1:subsamples, :]) < tol
 
         seek(io, 0)
         sr = convert(Int, min(5, trunc(Int, nsamples / 2))):convert(Int, min(23, nsamples - 1))
@@ -437,7 +437,7 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
         @assert out_nbits == nbits
         @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
         @test out_extra[:fmt].nchannels == nchans
-        @assert absdiff(out_data, in_data[1:Int(subsamples), :]) < tol
+        @assert absdiff(out_data, in_data[1:subsamples, :]) < tol
 
         seek(io, 0)
         sr = convert(Int, min(5, trunc(Int, nsamples / 2))):convert(Int, min(23, nsamples - 1))
