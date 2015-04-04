@@ -71,6 +71,8 @@ immutable WAVFormatExtension
     valid_bits_per_sample::UInt16
     channel_mask::UInt32
     sub_format::Array{UInt8, 1} # 16 byte GUID
+    WAVFormatExtension() = new(0, 0, Array(UInt8, 0))
+    WAVFormatExtension(nb, cm, sb) = new(nb, cm, sb)
 end
 
 # Required WAV Chunk; The format chunk describes how the waveform data is stored
@@ -83,9 +85,9 @@ type WAVFormat
     nbits::UInt16
     ext::WAVFormatExtension
 
-    WAVFormat() = new(0, 0, 0, 0, 0, 0, WAVFormatExtension(0, 0, []))
+    WAVFormat() = new(0, 0, 0, 0, 0, 0, WAVFormatExtension())
     WAVFormat(comp, chan, fs, bytes, ba, nbits) = new(comp, chan, fs, bytes, ba, nbits,
-                                                      WAVFormatExtension(0, 0, []))
+                                                      WAVFormatExtension())
 end
 
 const WAVE_FORMAT_PCM        = 0x0001 # PCM
@@ -716,7 +718,7 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
         fmt.compression_code = WAVE_FORMAT_EXTENSIBLE
         const valid_bits_per_sample = nbits
         const channel_mask = 0
-        sub_format = []
+        sub_format = Array(UInt8, 0)
         if compression == WAVE_FORMAT_PCM
             sub_format = KSDATAFORMAT_SUBTYPE_PCM
         elseif compression == WAVE_FORMAT_IEEE_FLOAT
