@@ -546,16 +546,17 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
 end
 
 function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T})
+    const nbits = bits_per_sample(fmt)
     # number of bytes per sample
-    const nbytes = ceil(Integer, fmt.nbits / 8)
+    const nbytes = ceil(Integer, nbits / 8)
     const bitshift::Array{UInt} = linspace(0, 64, 9)
-    const minval = fmt.nbits > 8 ? -2^(fmt.nbits - 1) : -2^(fmt.nbits)
-    const maxval = fmt.nbits > 8 ? 2^(fmt.nbits - 1) - 1 : 2^(fmt.nbits) - 1
+    const minval = nbits > 8 ? -2^(nbits - 1) : -2^(nbits)
+    const maxval = nbits > 8 ? 2^(nbits - 1) - 1 : 2^(nbits) - 1
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
             my_sample = clamp(samples[i, j], minval, maxval)
             # shift my_sample into the N most significant bits
-            my_sample <<= nbytes * 8 - fmt.nbits
+            my_sample <<= nbytes * 8 - nbits
             mask = convert(typeof(my_sample), 0xff)
             for k = 1:nbytes
                 write_le(io, convert(UInt8, (my_sample & mask) >> bitshift[k]))
@@ -566,13 +567,14 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
 end
 
 function write_pcm_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Array{T})
+    const nbits = bits_per_sample(fmt)
     # Scale the floating point values to the PCM range
-    if fmt.nbits > 8
+    if nbits > 8
         # two's complement
-        samples = convert(Array{pcm_container_type(fmt.nbits)}, round(samples * (2^(fmt.nbits - 1) - 1)))
+        samples = convert(Array{pcm_container_type(nbits)}, round(samples * (2^(nbits - 1) - 1)))
     else
         # offset binary
-        samples = convert(Array{UInt8}, round((samples .+ 1.0) / 2.0 * (2^fmt.nbits - 1)))
+        samples = convert(Array{UInt8}, round((samples .+ 1.0) / 2.0 * (2^nbits - 1)))
     end
     return write_pcm_samples(io, fmt, samples)
 end
@@ -595,7 +597,6 @@ end
 function write_data(io::IO, fmt::WAVFormat, samples::Array)
     if fmt.compression_code == WAVE_FORMAT_EXTENSIBLE
         if fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_PCM
-            fmt.nbits = fmt.ext.valid_bits_per_sample
             return write_pcm_samples(io, fmt, samples)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
             fmt.nbits = fmt.ext.valid_bits_per_sample
