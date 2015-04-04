@@ -58,9 +58,38 @@ The returned values are:
 * ``y``: The acoustic samples; A matrix is returned for files that contain multiple channels.
 * ``Fs``: The sampling frequency
 * ``nbits``: The number of bits used to encode each sample
-* ``extra``: Any additional bytes used to encode the samples (is always ``None``)
+* ``opt``: A ```Dict{Symbol, Any}``` of optional chunks found in the WAV file.
 
-   The following functions are also defined to make this function compatible with MATLAB:
+The dictionary returned in the ``opt`` field depends on the contents
+of the WAV file. All valid WAV files will contain a "fmt" chunk. The
+"fmt" entry in the dictionary will contain an instance of type
+``WAVFormat``. The ``WAVFormat`` type is defined as::
+
+```julia
+immutable WAVFormat
+    compression_code::UInt16
+    nchannels::UInt16
+    sample_rate::UInt32
+    bytes_per_second::UInt32 # average bytes per second
+    block_align::UInt16
+    nbits::UInt16
+    ext::WAVFormatExtension
+end
+```
+
+The ```ext``` field of type ```WAVFormatExtension``` is defined as::
+
+```julia
+immutable WAVFormatExtension
+    nbits::UInt16 # overrides nbits in WAVFormat type
+    channel_mask::UInt32
+    sub_format::Array{UInt8, 1} # 16 byte GUID
+    WAVFormatExtension() = new(0, 0, Array(UInt8, 0))
+    WAVFormatExtension(nb, cm, sb) = new(nb, cm, sb)
+end
+```
+
+The following functions are also defined to make this function compatible with MATLAB:
 
 ```julia
 wavread(filename::String, fmt::String) = wavread(filename, format=fmt)

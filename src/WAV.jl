@@ -1,6 +1,8 @@
 # -*- mode: julia; -*-
 module WAV
-export wavread, wavwrite, wavappend, wavplay, WAVArray
+export wavread, wavwrite, wavappend, wavplay
+export WAVArray, WAVFormatExtension, WAVFormat
+export isextensible, bits_per_sample
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
 import Base.unbox, Base.box
 using Compat
@@ -634,6 +636,7 @@ function wavread(io::IO; subrange=None, format="double")
     samples = Array(Float64)
     nbits = 0
     sample_rate = 0
+    opt = Dict{Symbol, Any}()
 
     # Note: This assumes that the format chunk is written in the file before the data chunk. The
     # specification does not require this assumption, but most real files are written that way.
@@ -657,6 +660,7 @@ function wavread(io::IO; subrange=None, format="double")
             fmt = read_format(io, subchunk_size)
             sample_rate = fmt.sample_rate
             nbits = bits_per_sample(fmt)
+            opt[:fmt] = fmt
         elseif subchunk_id == b"data"
             if format == "size"
                 return convert(Int, subchunk_size / fmt.block_align), convert(Int, fmt.nchannels)
@@ -668,7 +672,7 @@ function wavread(io::IO; subrange=None, format="double")
             skip(io, subchunk_size)
         end
     end
-    return samples, sample_rate, nbits, None
+    return samples, sample_rate, nbits, opt
 end
 
 function wavread(filename::String; subrange=None, format="double")

@@ -1,6 +1,7 @@
 ## -*-Julia-*-
 ## Test suite for Julia's WAV module
 reload("WAV.jl")
+using Base.Test
 
 # These float array comparison functions are from dists.jl
 function absdiff{T<:Real}(current::AbstractArray{T}, target::AbstractArray{T})
@@ -76,10 +77,15 @@ let
     WAV.write_data(io, fmt, samples)
 
     seek(io, 0)
-    y, fs, nbits, extra = WAV.wavread(io, format="native")
+    y, fs, nbits, opt = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 32
-    @assert extra == None
+    @test opt[:fmt].compression_code == compression
+    @test opt[:fmt].nchannels == nchannels
+    @test opt[:fmt].sample_rate == sample_rate
+    @test opt[:fmt].bytes_per_second == bps
+    @test opt[:fmt].block_align == block_align
+    @test WAV.bits_per_sample(opt[:fmt]) == nbits
     @assert samples == y
 end
 
@@ -140,7 +146,9 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
     @assert typeof(out_data) == Array{Float64, 2}
     @assert out_fs == fs
     @assert out_nbits == nbits
-    @assert out_extra == None
+    fmt = out_extra[:fmt]
+    @test WAV.bits_per_sample(fmt) == nbits
+    @test fmt.nchannels == nchans
     if nsamples > 0
         @assert absdiff(out_data, in_data) < tol
     end
@@ -157,7 +165,9 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @assert typeof(out_data) == Array{Float64, 2}
         @assert out_fs == fs
         @assert out_nbits == nbits
-        @assert out_extra == None
+        fmt = out_extra[:fmt]
+        @test WAV.bits_per_sample(fmt) == nbits
+        @test fmt.nchannels == nchans
         @assert absdiff(out_data, in_data[1:subsamples, :]) < tol
 
         seek(io, 0)
@@ -169,7 +179,9 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @assert typeof(out_data) == Array{Float64, 2}
         @assert out_fs == fs
         @assert out_nbits == nbits
-        @assert out_extra == None
+        fmt = out_extra[:fmt]
+        @test WAV.bits_per_sample(fmt) == nbits
+        @test fmt.nchannels == nchans
         @assert absdiff(out_data, in_data[sr, :]) < tol
     end
 end
@@ -196,7 +208,9 @@ for nchans = (1,2,4)
     out_data_8, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 8
-    @assert extra == None
+    fmt = extra[:fmt]
+    @test WAV.bits_per_sample(fmt) == nbits
+    @test fmt.nchannels == nchans
     @assert in_data_8 == out_data_8
 end
 
@@ -210,7 +224,9 @@ for nchans = (1,2,4)
     out_data_16, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 16
-    @assert extra == None
+    fmt = extra[:fmt]
+    @test WAV.bits_per_sample(fmt) == nbits
+    @test fmt.nchannels == nchans
     @assert in_data_16 == out_data_16
 end
 
@@ -224,7 +240,9 @@ for nchans = (1,2,4)
     out_data_24, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 24
-    @assert extra == None
+    fmt = extra[:fmt]
+    @test WAV.bits_per_sample(fmt) == nbits
+    @test fmt.nchannels == nchans
     @assert in_data_24 == out_data_24
 end
 
@@ -238,7 +256,9 @@ for nchans = (1,2,4)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 32
-    @assert extra == None
+    fmt = extra[:fmt]
+    @test WAV.bits_per_sample(fmt) == nbits
+    @test fmt.nchannels == nchans
     @assert in_data_single == out_data_single
 end
 
@@ -253,7 +273,9 @@ for nchans = (1,2,4)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 32
-    @assert extra == None
+    fmt = extra[:fmt]
+    @test WAV.bits_per_sample(fmt) == nbits
+    @test fmt.nchannels == nchans
     @assert [in_data_single[i, j] for i = 1:nsamps, j = 1:nchans] == out_data_single
 end
 
@@ -267,7 +289,9 @@ for nchans = (1,2,4)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 64
-    @assert extra == None
+    fmt = extra[:fmt]
+    @test WAV.bits_per_sample(fmt) == nbits
+    @test fmt.nchannels == nchans
     @assert in_data_single == out_data_single
 end
 
@@ -282,7 +306,9 @@ for nchans = (1,2,4)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @assert fs == 8000
     @assert nbits == 64
-    @assert extra == None
+    fmt = extra[:fmt]
+    @test WAV.bits_per_sample(fmt) == nbits
+    @test fmt.nchannels == nchans
     @assert [in_data_single[i, j] for i = 1:nsamps, j = 1:nchans] == out_data_single
 end
 
@@ -318,7 +344,9 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
     @assert typeof(out_data) == Array{Float64, 2}
     @assert out_fs == fs
     @assert out_nbits == 8
-    @assert out_extra == None
+    @test WAV.bits_per_sample(out_extra[:fmt]) == 8
+    @test out_extra[:fmt].nchannels == nchans
+    @test out_extra[:fmt].compression_code == fmt
     if nsamples > 0
         @assert absdiff(out_data, in_data) < tol
     end
@@ -335,7 +363,9 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @assert typeof(out_data) == Array{Float64, 2}
         @assert out_fs == fs
         @assert out_nbits == 8
-        @assert out_extra == None
+        @test WAV.bits_per_sample(out_extra[:fmt]) == 8
+        @test out_extra[:fmt].nchannels == nchans
+        @test out_extra[:fmt].compression_code == fmt
         @assert absdiff(out_data, in_data[1:Int(subsamples), :]) < tol
 
         seek(io, 0)
@@ -347,7 +377,9 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @assert typeof(out_data) == Array{Float64, 2}
         @assert out_fs == fs
         @assert out_nbits == 8
-        @assert out_extra == None
+        @test WAV.bits_per_sample(out_extra[:fmt]) == 8
+        @test out_extra[:fmt].nchannels == nchans
+        @test out_extra[:fmt].compression_code == fmt
         @assert absdiff(out_data, in_data[sr, :]) < tol
     end
 end
@@ -384,7 +416,8 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
     @assert typeof(out_data) == Array{Float64, 2}
     @assert out_fs == fs
     @assert out_nbits == nbits
-    @assert out_extra == None
+    @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
+    @test out_extra[:fmt].nchannels == nchans
     if nsamples > 0
         @assert absdiff(out_data, in_data) < tol
     end
@@ -401,7 +434,8 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
         @assert typeof(out_data) == Array{Float64, 2}
         @assert out_fs == fs
         @assert out_nbits == nbits
-        @assert out_extra == None
+        @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
+        @test out_extra[:fmt].nchannels == nchans
         @assert absdiff(out_data, in_data[1:Int(subsamples), :]) < tol
 
         seek(io, 0)
@@ -413,7 +447,8 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
         @assert typeof(out_data) == Array{Float64, 2}
         @assert out_fs == fs
         @assert out_nbits == nbits
-        @assert out_extra == None
+        @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
+        @test out_extra[:fmt].nchannels == nchans
         @assert absdiff(out_data, in_data[sr, :]) < tol
     end
 end
