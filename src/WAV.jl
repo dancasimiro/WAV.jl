@@ -97,6 +97,7 @@ const WAVE_FORMAT_MULAW      = 0x0007 # Mu-Law
 const WAVE_FORMAT_EXTENSIBLE = 0xfffe # Extension!
 
 isextensible(fmt::WAVFormat) = (fmt.compression_code == WAVE_FORMAT_EXTENSIBLE)
+bits_per_sample(fmt::WAVFormat) = isextensible(fmt) ? fmt.ext.valid_bits_per_sample : fmt.nbits
 
 # DEFINE_GUIDSTRUCT("00000001-0000-0010-8000-00aa00389b71", KSDATAFORMAT_SUBTYPE_PCM);
 const KSDATAFORMAT_SUBTYPE_PCM = [
