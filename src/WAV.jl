@@ -601,10 +601,8 @@ function write_data(io::IO, fmt::WAVFormat, samples::Array)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
             return write_ieee_float_samples(io, fmt, samples)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
-            fmt.nbits = 8
             return write_companded_samples(io, samples, compress_sample_alaw)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
-            fmt.nbits = 8
             return write_companded_samples(io, samples, compress_sample_mulaw)
         else
             error("$(fmt.ext) -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
