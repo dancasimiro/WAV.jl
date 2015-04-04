@@ -519,10 +519,8 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
             samples = read_ieee_float_samples(io, fmt, subrange)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
-            fmt.nbits = 8
             samples = read_alaw_samples(io, fmt, subrange)
         elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
-            fmt.nbits = 8
             samples = read_mulaw_samples(io, fmt, subrange)
         else
             error("$(fmt.ext) -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
