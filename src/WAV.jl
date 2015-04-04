@@ -80,7 +80,7 @@ immutable WAVFormat
     compression_code::UInt16
     nchannels::UInt16
     sample_rate::UInt32
-    bps::UInt32 # average bytes per second
+    bytes_per_second::UInt32 # average bytes per second
     block_align::UInt16
     nbits::UInt16
     ext::WAVFormatExtension
@@ -205,7 +205,7 @@ function write_format(io::IO, fmt::WAVFormat)
     write_le(io, fmt.compression_code) # audio format (UInt16)
     write_le(io, fmt.nchannels) # number of channels (UInt16)
     write_le(io, fmt.sample_rate) # sample rate (UInt32)
-    write_le(io, fmt.bps) # byte rate (UInt32)
+    write_le(io, fmt.bytes_per_second) # byte rate (UInt32)
     write_le(io, fmt.block_align) # byte align (UInt16)
     write_le(io, fmt.nbits) # number of bits per sample (UInt16)
 
