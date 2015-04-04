@@ -2,6 +2,7 @@
 ## Test suite for Julia's WAV module
 reload("WAV.jl")
 using Base.Test
+using Compat
 
 # These float array comparison functions are from dists.jl
 function absdiff{T<:Real}(current::AbstractArray{T}, target::AbstractArray{T})
@@ -68,7 +69,7 @@ let
                               nbits,
                               WAV.WAVFormatExtension())
 
-    WAV.write_header(io, data_length + UInt32(37)) # 37 instead of 36 is the broken part
+    WAV.write_header(io, @compat UInt32(data_length + 37)) # 37 instead of 36 is the broken part
     WAV.write_format(io, fmt)
 
     # write the data subchunk header
