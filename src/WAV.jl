@@ -2,7 +2,7 @@
 module WAV
 export wavread, wavwrite, wavappend, wavplay
 export WAVArray, WAVFormatExtension, WAVFormat
-export isextensible, bits_per_sample
+export isextensible, isformat, bits_per_sample
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
 import Base.unbox, Base.box
 using Compat
@@ -129,6 +129,25 @@ const KSDATAFORMAT_SUBTYPE_ALAW = [
 0x80, 0x00,
 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71
                                    ]
+
+function isformat(fmt::WAVFormat, code)
+    if code != WAVE_FORMAT_EXTENSIBLE && isextensible(fmt)
+        subtype = Array(UInt8, 0)
+        if code == WAVE_FORMAT_PCM
+            subtype = KSDATAFORMAT_SUBTYPE_PCM
+        elseif code == WAVE_FORMAT_IEEE_FLOAT
+            subtype = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
+        elseif code == WAVE_FORMAT_ALAW
+            subtype = KSDATAFORMAT_SUBTYPE_ALAW
+        elseif code == WAVE_FORMAT_MULAW
+            subtype = KSDATAFORMAT_SUBTYPE_MULAW
+        else
+            return false
+        end
+        return subtype == fmt.ext.sub_format
+    end
+    return fmt.compression_code == code
+end
 
 function WAVFormatExtension(bytes::Array{UInt8})
     if isempty(bytes)

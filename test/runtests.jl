@@ -43,6 +43,7 @@ let
     @assert typeof(y) == Array{Float32, 2}
     @assert fs == 8000.0
     @assert nbits == 32
+    @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
 end
 
 ## malformed subchunk header, GitHub Issue #18
@@ -86,6 +87,7 @@ let
     @test opt[:fmt].sample_rate == sample_rate
     @test opt[:fmt].bytes_per_second == bps
     @test opt[:fmt].block_align == block_align
+    @test WAV.isformat(opt[:fmt], compression)
     @test WAV.bits_per_sample(opt[:fmt]) == nbits
     @assert samples == y
 end
@@ -99,6 +101,8 @@ let
     @assert typeof(y) == Array{Float64, 2}
     @assert fs == 8000.0
     @assert nbits == 64
+    @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
+    @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_EXTENSIBLE)
 end
 
 let
@@ -110,6 +114,7 @@ let
     @assert typeof(y) == Array{Float32, 2}
     @assert fs == 8000.0
     @assert nbits == 32
+    @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
 end
 
 ## Test wavread and wavwrite
@@ -149,9 +154,13 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
     @assert out_nbits == nbits
     fmt = out_extra[:fmt]
     @test WAV.bits_per_sample(fmt) == nbits
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
     @test fmt.nchannels == nchans
     if nsamples > 0
         @assert absdiff(out_data, in_data) < tol
+    end
+    if nchans > 2
+        @test WAV.isformat(fmt, WAV.WAVE_FORMAT_EXTENSIBLE)
     end
 
     ## test the "subrange" option.
@@ -168,6 +177,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @assert out_nbits == nbits
         fmt = out_extra[:fmt]
         @test WAV.bits_per_sample(fmt) == nbits
+        @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
         @test fmt.nchannels == nchans
         @assert absdiff(out_data, in_data[1:subsamples, :]) < tol
 
@@ -182,6 +192,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @assert out_nbits == nbits
         fmt = out_extra[:fmt]
         @test WAV.bits_per_sample(fmt) == nbits
+        @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
         @test fmt.nchannels == nchans
         @assert absdiff(out_data, in_data[sr, :]) < tol
     end
@@ -211,6 +222,7 @@ for nchans = (1,2,4)
     @assert nbits == 8
     fmt = extra[:fmt]
     @test WAV.bits_per_sample(fmt) == nbits
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
     @test fmt.nchannels == nchans
     @assert in_data_8 == out_data_8
 end
@@ -227,6 +239,7 @@ for nchans = (1,2,4)
     @assert nbits == 16
     fmt = extra[:fmt]
     @test WAV.bits_per_sample(fmt) == nbits
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
     @test fmt.nchannels == nchans
     @assert in_data_16 == out_data_16
 end
@@ -243,6 +256,7 @@ for nchans = (1,2,4)
     @assert nbits == 24
     fmt = extra[:fmt]
     @test WAV.bits_per_sample(fmt) == nbits
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
     @test fmt.nchannels == nchans
     @assert in_data_24 == out_data_24
 end
@@ -259,6 +273,7 @@ for nchans = (1,2,4)
     @assert nbits == 32
     fmt = extra[:fmt]
     @test WAV.bits_per_sample(fmt) == nbits
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
     @test fmt.nchannels == nchans
     @assert in_data_single == out_data_single
 end
@@ -276,6 +291,7 @@ for nchans = (1,2,4)
     @assert nbits == 32
     fmt = extra[:fmt]
     @test WAV.bits_per_sample(fmt) == nbits
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
     @test fmt.nchannels == nchans
     @assert [in_data_single[i, j] for i = 1:nsamps, j = 1:nchans] == out_data_single
 end
@@ -293,6 +309,7 @@ for nchans = (1,2,4)
     fmt = extra[:fmt]
     @test WAV.bits_per_sample(fmt) == nbits
     @test fmt.nchannels == nchans
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
     @assert in_data_single == out_data_single
 end
 
@@ -309,6 +326,7 @@ for nchans = (1,2,4)
     @assert nbits == 64
     fmt = extra[:fmt]
     @test WAV.bits_per_sample(fmt) == nbits
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
     @test fmt.nchannels == nchans
     @assert [in_data_single[i, j] for i = 1:nsamps, j = 1:nchans] == out_data_single
 end
@@ -348,6 +366,8 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
     @test WAV.bits_per_sample(out_extra[:fmt]) == 8
     @test out_extra[:fmt].nchannels == nchans
     @test out_extra[:fmt].compression_code == fmt
+    @test WAV.isformat(out_extra[:fmt], fmt)
+    @test !WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_EXTENSIBLE)
     if nsamples > 0
         @assert absdiff(out_data, in_data) < tol
     end
@@ -367,6 +387,7 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @test WAV.bits_per_sample(out_extra[:fmt]) == 8
         @test out_extra[:fmt].nchannels == nchans
         @test out_extra[:fmt].compression_code == fmt
+        @test WAV.isformat(out_extra[:fmt], fmt)
         @assert absdiff(out_data, in_data[1:subsamples, :]) < tol
 
         seek(io, 0)
@@ -381,6 +402,7 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @test WAV.bits_per_sample(out_extra[:fmt]) == 8
         @test out_extra[:fmt].nchannels == nchans
         @test out_extra[:fmt].compression_code == fmt
+        @test WAV.isformat(out_extra[:fmt], fmt)
         @assert absdiff(out_data, in_data[sr, :]) < tol
     end
 end
@@ -418,6 +440,7 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
     @assert out_fs == fs
     @assert out_nbits == nbits
     @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
+    @test WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
     @test out_extra[:fmt].nchannels == nchans
     if nsamples > 0
         @assert absdiff(out_data, in_data) < tol
@@ -437,6 +460,7 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
         @assert out_nbits == nbits
         @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
         @test out_extra[:fmt].nchannels == nchans
+        @test WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
         @assert absdiff(out_data, in_data[1:subsamples, :]) < tol
 
         seek(io, 0)
@@ -449,6 +473,7 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
         @assert out_fs == fs
         @assert out_nbits == nbits
         @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
+        @test WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
         @test out_extra[:fmt].nchannels == nchans
         @assert absdiff(out_data, in_data[sr, :]) < tol
     end
