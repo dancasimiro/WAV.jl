@@ -259,7 +259,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     end
     samples = Array(pcm_container_type(nbits), length(subrange), fmt.nchannels)
     const nbytes = ceil(Integer, nbits / 8)
-    const bitshift::Array{UInt} = linspace(0, 64, 9)
+    const bitshift = linspace(0, 64, 9)
     const mask = unsigned(1) << (nbits - 1)
     const signextend_mask = ~unsigned(0) << nbits
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
@@ -268,7 +268,8 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
             raw_sample = read(io, UInt8, nbytes)
             my_sample = unsigned(0)
             for k = 1:nbytes
-                my_sample |= convert(UInt64, raw_sample[k]) << bitshift[k]
+                const shiftval = @compat UInt(bitshift[k])
+                my_sample |= convert(UInt64, raw_sample[k]) << shiftval
             end
             my_sample >>= nbytes * 8 - nbits
             # sign extend negative values
@@ -575,7 +576,7 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
     const nbits = bits_per_sample(fmt)
     # number of bytes per sample
     const nbytes = ceil(Integer, nbits / 8)
-    const bitshift::Array{UInt} = linspace(0, 64, 9)
+    const bitshift = linspace(0, 64, 9)
     const minval = nbits > 8 ? -2^(nbits - 1) : -2^(nbits)
     const maxval = nbits > 8 ? 2^(nbits - 1) - 1 : 2^(nbits) - 1
     for i = 1:size(samples, 1)
@@ -585,7 +586,8 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
             my_sample <<= nbytes * 8 - nbits
             mask = convert(typeof(my_sample), 0xff)
             for k = 1:nbytes
-                write_le(io, convert(UInt8, (my_sample & mask) >> bitshift[k]))
+                const shiftval = @compat UInt(bitshift[k])
+                write_le(io, convert(UInt8, (my_sample & mask) >> shiftval))
                 mask <<= 8
             end
         end
