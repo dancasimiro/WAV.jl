@@ -461,7 +461,7 @@ function compress_sample_mulaw(sample)
     sample = sample + cBias
     const sampleExponent = MuLawCompressTable[(sample >>> 7) + 1]
     const mantissa = (sample >> (sampleExponent+3)) & 0x0F
-    (~ (sampleSign | (sampleExponent << 4) | mantissa)) & 0xff
+    @compat UInt8((~ (sampleSign | (sampleExponent << 4) | mantissa)) & 0xff)
 end
 
 function compress_sample_alaw(sample)
@@ -503,15 +503,14 @@ function compress_sample_alaw(sample)
         compressedByte = (sample >>> 4) & 0xff
     end
     compressedByte $= (sampleSign $ 0x55)
-    compressedByte & 0xff
+    @compat UInt8(compressedByte & 0xff)
 end
 
 
 function write_companded_samples{T<:Integer}(io::IO, samples::Array{T}, compander::Function)
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
-            const compressedByte = compander(samples[i, j])
-            write_le(io, convert(UInt8, compressedByte))
+            write_le(io, compander(samples[i, j]))
         end
     end
 end
