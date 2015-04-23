@@ -537,28 +537,15 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
         # each block stores fmt.nchannels channels
         subrange = 1:convert(UInt, chunk_size / fmt.block_align)
     end
-    if fmt.compression_code == WAVE_FORMAT_EXTENSIBLE
-        if fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_PCM
-            samples = read_pcm_samples(io, fmt, subrange)
-            convert_to_double = x -> convert_pcm_to_double(x, bits_per_sample(fmt))
-        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-            samples = read_ieee_float_samples(io, fmt, subrange)
-        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
-            samples = read_alaw_samples(io, fmt, subrange)
-        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
-            samples = read_mulaw_samples(io, fmt, subrange)
-        else
-            error("$(fmt.ext) -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
-        end
-    elseif fmt.compression_code == WAVE_FORMAT_PCM
+    if isformat(fmt, WAVE_FORMAT_PCM)
         samples = read_pcm_samples(io, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, bits_per_sample(fmt))
-    elseif fmt.compression_code == WAVE_FORMAT_IEEE_FLOAT
+    elseif isformat(fmt, WAVE_FORMAT_IEEE_FLOAT)
         samples = read_ieee_float_samples(io, fmt, subrange)
-    elseif fmt.compression_code == WAVE_FORMAT_MULAW
+    elseif isformat(fmt, WAVE_FORMAT_MULAW)
         samples = read_mulaw_samples(io, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, 16)
-    elseif fmt.compression_code == WAVE_FORMAT_ALAW
+    elseif isformat(fmt, WAVE_FORMAT_ALAW)
         samples = read_alaw_samples(io, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, 16)
     else

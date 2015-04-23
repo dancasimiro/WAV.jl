@@ -332,7 +332,7 @@ for nchans = (1,2,4)
 end
 
 ### Test A-Law and Mu-Law
-for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:2, fmt=(WAV.WAVE_FORMAT_ALAW, WAV.WAVE_FORMAT_MULAW)
+for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:4, fmt=(WAV.WAVE_FORMAT_ALAW, WAV.WAVE_FORMAT_MULAW)
     const fs = 8000.0
     const tol = 2.0 / (2.0^6)
     in_data = rand(nsamples, nchans)
@@ -365,11 +365,14 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
     @assert out_nbits == 8
     @test WAV.bits_per_sample(out_extra[:fmt]) == 8
     @test out_extra[:fmt].nchannels == nchans
-    @test out_extra[:fmt].compression_code == fmt
     @test WAV.isformat(out_extra[:fmt], fmt)
-    @test !WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_EXTENSIBLE)
+    if nchans > 2
+        @test WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_EXTENSIBLE)
+    else
+        @test !WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_EXTENSIBLE)
+    end
     if nsamples > 0
-        @assert absdiff(out_data, in_data) < tol
+        @test absdiff(out_data, in_data) < tol
     end
 
     ## test the "subrange" option.
@@ -386,7 +389,6 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @assert out_nbits == 8
         @test WAV.bits_per_sample(out_extra[:fmt]) == 8
         @test out_extra[:fmt].nchannels == nchans
-        @test out_extra[:fmt].compression_code == fmt
         @test WAV.isformat(out_extra[:fmt], fmt)
         @assert absdiff(out_data, in_data[1:subsamples, :]) < tol
 
@@ -401,7 +403,6 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @assert out_nbits == 8
         @test WAV.bits_per_sample(out_extra[:fmt]) == 8
         @test out_extra[:fmt].nchannels == nchans
-        @test out_extra[:fmt].compression_code == fmt
         @test WAV.isformat(out_extra[:fmt], fmt)
         @assert absdiff(out_data, in_data[sr, :]) < tol
     end
