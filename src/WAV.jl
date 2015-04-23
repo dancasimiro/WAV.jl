@@ -621,25 +621,13 @@ function write_ieee_float_samples(io::IO, fmt::WAVFormat, samples)
 end
 
 function write_data(io::IO, fmt::WAVFormat, samples::Array)
-    if fmt.compression_code == WAVE_FORMAT_EXTENSIBLE
-        if fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_PCM
-            return write_pcm_samples(io, fmt, samples)
-        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-            return write_ieee_float_samples(io, fmt, samples)
-        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_ALAW
-            return write_companded_samples(io, samples, compress_sample_alaw)
-        elseif fmt.ext.sub_format == KSDATAFORMAT_SUBTYPE_MULAW
-            return write_companded_samples(io, samples, compress_sample_mulaw)
-        else
-            error("$(fmt.ext) -- WAVE_FORMAT_EXTENSIBLE Not done yet!")
-        end
-    elseif fmt.compression_code == WAVE_FORMAT_PCM
+    if isformat(fmt, WAVE_FORMAT_PCM)
         return write_pcm_samples(io, fmt, samples)
-    elseif fmt.compression_code == WAVE_FORMAT_IEEE_FLOAT
+    elseif isformat(fmt, WAVE_FORMAT_IEEE_FLOAT)
         return write_ieee_float_samples(io, fmt, samples)
-    elseif fmt.compression_code == WAVE_FORMAT_MULAW
+    elseif isformat(fmt, WAVE_FORMAT_MULAW)
         return write_companded_samples(io, samples, compress_sample_mulaw)
-    elseif fmt.compression_code == WAVE_FORMAT_ALAW
+    elseif isformat(fmt, WAVE_FORMAT_ALAW)
         return write_companded_samples(io, samples, compress_sample_alaw)
     else
         error("$(fmt.compression_code) is an unsupported compression code.")
