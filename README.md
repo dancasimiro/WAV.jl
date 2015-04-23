@@ -89,6 +89,20 @@ immutable WAVFormatExtension
 end
 ```
 
+You can use the ```isformat``` function to test how the samples are
+encoded, without worrying about the ```WAVFormatExtension```
+type. Extended WAV files were added to deal with some ambiguity in the
+original specification.
+
+```julia
+isformat(fmt::WAVFormat, code)
+```
+
+The ```isformat``` function takes the format object from the ```opt```
+output dictionary of ```wavread``` and one of ```WAV_FORMAT_```
+constants, respectively. The function returns ```true``` when the
+samples are encoded in the specified ```code```.
+
 The following functions are also defined to make this function compatible with MATLAB:
 
 ```julia
