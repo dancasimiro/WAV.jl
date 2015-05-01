@@ -313,7 +313,7 @@ function read_companded_samples(io::IO, fmt::WAVFormat, subrange, table)
     for i = 1:nblocks
         for j = 1:fmt.nchannels
             # add one to value from blocks because A-law stores values from 0 to 255.
-            const compressedByte::UInt8 = clamp(read_le(io, UInt8), 0, 255)
+            const compressedByte::UInt8 = read(io, UInt8)
             # Julia indexing is 1-based; I need a value from 1 to 256
             samples[i, j] = table[compressedByte + 1]
         end
