@@ -622,7 +622,6 @@ end
 
 make_range(subrange) = subrange
 make_range(subrange::Number) = 1:convert(Int, subrange)
-make_range(subrange::Range1) = convert(Range1{Int}, subrange)
 
 function wavread(io::IO; subrange=None, format="double")
     chunk_size = read_header(io)
@@ -678,10 +677,8 @@ end
 
 # These are the MATLAB compatible signatures
 wavread(filename::String, fmt::String) = wavread(filename, format=fmt)
-wavread(filename::String, n::Int) = wavread(filename, subrange=n)
-wavread(filename::String, n::Range1) = wavread(filename, subrange=n)
-wavread(filename::String, n::Int, fmt::String) = wavread(filename, subrange=n, format=fmt)
-wavread(filename::String, n::Range1, fmt::String) = wavread(filename, subrange=n, format=fmt)
+wavread(filename::String, n) = wavread(filename, subrange=n)
+wavread(filename::String, n, fmt) = wavread(filename, subrange=n, format=fmt)
 
 get_default_compression{T<:Integer}(::Array{T}) = WAVE_FORMAT_PCM
 get_default_compression{T<:FloatingPoint}(::Array{T}) = WAVE_FORMAT_IEEE_FLOAT
