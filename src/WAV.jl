@@ -668,11 +668,9 @@ function wavread(io::IO; subrange=None, format="double")
 end
 
 function wavread(filename::String; subrange=None, format="double")
-    io = open(filename, "r")
-    finalizer(io, close)
-    const result = wavread(io, subrange=subrange, format=format)
-    close(io)
-    return result
+    open(filename, "r") do io
+        wavread(io, subrange=subrange, format=format)
+    end
 end
 
 # These are the MATLAB compatible signatures
@@ -750,11 +748,9 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
 end
 
 function wavwrite(samples::Array, filename::String; Fs=8000, nbits=0, compression=0)
-    io = open(filename, "w")
-    finalizer(io, close)
-    const result = wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression)
-    close(io)
-    return result
+    open(filename, "w") do io
+        wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression)
+    end
 end
 
 function wavappend(samples::Array, io::IO)
@@ -786,11 +782,9 @@ function wavappend(samples::Array, io::IO)
 end
 
 function wavappend(samples::Array, filename::String)
-    io = open(filename, true,true,false,false,true)  # r, w, & a
-    finalizer(io, close)
-    const result = wavappend(samples,io)
-    close(io)
-    return result
+    open(filename, "rwa") do io
+        wavappend(samples,io)
+    end
 end
 
 wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, Fs=f)
