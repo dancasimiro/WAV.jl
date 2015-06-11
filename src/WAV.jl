@@ -627,7 +627,7 @@ function wavread(io::IO; subrange=None, format="double")
     chunk_size = read_header(io)
     samples = Array(Float64)
     nbits = 0
-    sample_rate = 0
+    sample_rate = @compat Float32(0.0)
     opt = Dict{Symbol, Any}()
 
     # Note: This assumes that the format chunk is written in the file before the data chunk. The
@@ -650,7 +650,7 @@ function wavread(io::IO; subrange=None, format="double")
         # check the subchunk ID
         if subchunk_id == b"fmt "
             fmt = read_format(io, subchunk_size)
-            sample_rate = fmt.sample_rate
+            sample_rate = @compat Float32(fmt.sample_rate)
             nbits = bits_per_sample(fmt)
             opt[:fmt] = fmt
         elseif subchunk_id == b"data"
