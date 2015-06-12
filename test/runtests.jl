@@ -479,3 +479,18 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
         @assert absdiff(out_data, in_data[sr, :]) < tol
     end
 end
+
+### Read unknown chunks
+let
+    const fs = 8000.0
+    in_data = rand(1024, 2)
+    io = IOBuffer()
+    in_chunks = @compat Dict(:test=>[0x1, 0x2, 0x3])
+    WAV.wavwrite(in_data, io, Fs=fs, chunks=in_chunks)
+
+    seek(io, 0)
+    data, fs, nbits, ext = WAV.wavread(io)
+
+    @test haskey(ext, :test) == true
+    @test ext[:test] == in_chunks[:test]
+end

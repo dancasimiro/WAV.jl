@@ -659,9 +659,7 @@ function wavread(io::IO; subrange=None, format="double")
             end
             samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
-            # return unknown sub-chunks?
-            # Note: Ignoring unknown sub chunks for now
-            skip(io, subchunk_size)
+            opt[symbol(subchunk_id)] = read(io, UInt8, subchunk_size)
         end
     end
     return samples, sample_rate, nbits, opt
@@ -693,7 +691,8 @@ function get_default_precision(samples, compression)
     get_default_pcm_precision(samples)
 end
 
-function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
+function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0,
+                  chunks::Dict{Symbol, Array{UInt8,1}}=Dict{Symbol, Array{UInt8,1}}())
     if compression == 0
         compression = get_default_compression(samples)
     elseif compression == WAVE_FORMAT_ALAW || compression == WAVE_FORMAT_MULAW
@@ -741,15 +740,24 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0)
                     ext)
     write_format(io, fmt)
 
+    for eachchunk in chunks
+        write(io, eachchunk[1])
+        write_le(io, @compat UInt32(length(eachchunk[2])))
+        for eachbyte in eachchunk[2]
+            write(io, eachbyte)
+        end
+    end
+
     # write the data subchunk header
     write(io, b"data")
     write_le(io, data_length) # UInt32
     write_data(io, fmt, samples)
 end
 
-function wavwrite(samples::Array, filename::String; Fs=8000, nbits=0, compression=0)
+function wavwrite(samples::Array, filename::String; Fs=8000, nbits=0, compression=0,
+                  chunks::Dict{Symbol, Array{UInt8,1}}=Dict{Symbol, Array{UInt8,1}}())
     open(filename, "w") do io
-        wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression)
+        wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression, chunks=chunks)
     end
 end
 
