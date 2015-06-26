@@ -7,17 +7,19 @@ export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MU
 import Base.unbox, Base.box
 using Compat
 
-if Libdl.find_library(["libpulse-simple"]) != ""
-    include("wavplay-pulse.jl")
-elseif Libdl.find_library(["AudioToolbox"],
-                          ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
-    include("wavplay-audioqueue.jl")
-else
-    wavplay() = warn("wavplay is not currently implemented on $OS_NAME")
+function __init__()
+    if Libdl.find_library(["libpulse-simple"]) != ""
+        include("wavplay-pulse.jl")
+    elseif Libdl.find_library(["AudioToolbox"],
+                              ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
+        include("wavplay-audioqueue.jl")
+    else
+        include("wavplay-unsupported.jl")
+    end
 end
-wavplay(fname) = wavplay(wavread(fname)...)
 
 include("AudioDisplay.jl")
+wavplay(fname) = wavplay(wavread(fname)...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
 write_le(stream::IO, value::UInt8) = write(stream, value)

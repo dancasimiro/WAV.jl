@@ -1,4 +1,7 @@
 # -*- mode: julia; -*-
+module WAVPlay
+import WAV.wavplay
+using Compat
 
 typealias OSStatus Int32
 typealias CFTypeRef Ptr{Void}
@@ -363,3 +366,4 @@ function wavplay(data, fs)
     CFRunLoopRun()
     AudioQueueDispose(userData.aq, true)
 end
+end # module
