@@ -19,7 +19,7 @@ function __init__()
 end
 
 include("AudioDisplay.jl")
-wavplay(fname) = wavplay(wavread(fname)...)
+wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
 write_le(stream::IO, value::UInt8) = write(stream, value)
