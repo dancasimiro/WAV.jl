@@ -1,4 +1,5 @@
 # -*- mode: julia; -*-
+Base.__precompile__(true)
 module WAV
 export wavread, wavwrite, wavappend, wavplay
 export WAVArray, WAVFormatExtension, WAVFormat
@@ -8,13 +9,14 @@ import Base.unbox, Base.box
 using Compat
 
 function __init__()
+    module_dir = dirname(@__FILE__)
     if Libdl.find_library(["libpulse-simple"]) != ""
-        include("wavplay-pulse.jl")
+        include(joinpath(module_dir, "wavplay-pulse.jl"))
     elseif Libdl.find_library(["AudioToolbox"],
                               ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
-        include("wavplay-audioqueue.jl")
+        include(joinpath(module_dir, "wavplay-audioqueue.jl"))
     else
-        include("wavplay-unsupported.jl")
+        include(joinpath(module_dir, "wavplay-unsupported.jl"))
     end
 end
 
