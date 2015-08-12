@@ -1,5 +1,5 @@
 # -*- mode: julia; -*-
-Base.__precompile__(true)
+VERSION >= v"0.4.0-dev+6521" && Base.__precompile__(true)
 module WAV
 export wavread, wavwrite, wavappend, wavplay
 export WAVArray, WAVFormatExtension, WAVFormat
