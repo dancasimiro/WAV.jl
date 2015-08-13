@@ -161,19 +161,18 @@ end
 
 function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     buffer = unsafe_load(bufPtr)
-    const elType = eltype(data)
-    const elSize = sizeof(elType)
+    @assert buffer.mAudioDataBytesCapacity / sizeof(eltype(data)) >= length(data)
+
     const nChannels = size(data, 2)
-    const nSamples::UInt = min(buffer.mAudioDataBytesCapacity / (elSize * nChannels),
-                               size(data, 1))
-    const coreAudioData = convert(Ptr{elType}, buffer.mAudioData)
-    for i = 1:nSamples
+    const coreAudioData = convert(Ptr{eltype(data)}, buffer.mAudioData)
+    for i = 1:size(data, 1) # for each sample
         const coreAudioIndex = (nChannels * (i - 1))
         for j = 1:nChannels
             unsafe_store!(coreAudioData, data[i, j], coreAudioIndex + j)
         end
     end
-    buffer.mAudioDataByteSize = nSamples * elSize * nChannels
+    buffer.mAudioDataByteSize = sizeof(data)
+
     unsafe_store!(bufPtr, buffer)
     const result = ccall((:AudioQueueEnqueueBuffer, AudioToolbox),
                          OSStatus,
@@ -182,18 +181,16 @@ function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     if result != 0
         error("AudioQueueEnqueueBuffer failed with $result")
     end
-    return nSamples
+    return length(data)
 end
 
 function enqueueBuffer(userData, buf)
     if userData.offset >= userData.nSamples
         return false
     end
-    const rng = userData.offset:userData.nSamples
-    const nchans = size(userData.samples, 2)
-    const samples = sub(userData.samples, tuple(rng, @compat ntuple(_->:, nchans - 1)...)...)
-    const samplesEnqueued = AudioQueueEnqueueBuffer(userData.aq, buf, samples)
-    userData.offset += samplesEnqueued
+    userData.offset +=
+        AudioQueueEnqueueBuffer(userData.aq, buf,
+                                userData.samples[userData.offset:min(userData.offset+511, userData.nSamples)])
     userData.nBuffersEnqueued += 1
     return true
 end
