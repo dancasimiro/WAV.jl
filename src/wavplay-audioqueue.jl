@@ -181,16 +181,22 @@ function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     if result != 0
         error("AudioQueueEnqueueBuffer failed with $result")
     end
-    return length(data)
 end
 
 function enqueueBuffer(userData, buf)
     if userData.offset >= userData.nSamples
         return false
     end
-    userData.offset +=
-        AudioQueueEnqueueBuffer(userData.aq, buf,
-                                userData.samples[userData.offset:min(userData.offset+511, userData.nSamples)])
+    nsamples::Int = 512
+    for i in (ndims(userData.samples) - 1)
+        nsamples /= size(userData.samples, i + 1)
+    end
+    nsamples -= 1
+    end_offset = min(userData.offset + nsamples, userData.nSamples)
+    idx = ntuple(i -> i > 1 ? colon(1, size(userData.samples, i)) : userData.offset:end_offset,
+                 ndims(userData.samples))
+    AudioQueueEnqueueBuffer(userData.aq, buf, getindex(userData.samples, idx...))
+    userData.offset = end_offset
     userData.nBuffersEnqueued += 1
     return true
 end
