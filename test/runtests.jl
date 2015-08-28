@@ -1,6 +1,6 @@
 ## -*-Julia-*-
 ## Test suite for Julia's WAV module
-reload("WAV.jl")
+import WAV
 using Base.Test
 using Compat
 

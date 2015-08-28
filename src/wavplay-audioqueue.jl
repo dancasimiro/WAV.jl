@@ -1,4 +1,7 @@
 # -*- mode: julia; -*-
+module WAVPlay
+import WAV.wavplay
+using Compat
 
 typealias OSStatus Int32
 typealias CFTypeRef Ptr{Void}
@@ -158,19 +161,18 @@ end
 
 function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     buffer = unsafe_load(bufPtr)
-    const elType = eltype(data)
-    const elSize = sizeof(elType)
+    @assert buffer.mAudioDataBytesCapacity / sizeof(eltype(data)) >= length(data)
+
     const nChannels = size(data, 2)
-    const nSamples::UInt = min(buffer.mAudioDataBytesCapacity / (elSize * nChannels),
-                               size(data, 1))
-    const coreAudioData = convert(Ptr{elType}, buffer.mAudioData)
-    for i = 1:nSamples
+    const coreAudioData = convert(Ptr{eltype(data)}, buffer.mAudioData)
+    for i = 1:size(data, 1) # for each sample
         const coreAudioIndex = (nChannels * (i - 1))
         for j = 1:nChannels
             unsafe_store!(coreAudioData, data[i, j], coreAudioIndex + j)
         end
     end
-    buffer.mAudioDataByteSize = nSamples * elSize * nChannels
+    buffer.mAudioDataByteSize = sizeof(data)
+
     unsafe_store!(bufPtr, buffer)
     const result = ccall((:AudioQueueEnqueueBuffer, AudioToolbox),
                          OSStatus,
@@ -179,18 +181,22 @@ function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     if result != 0
         error("AudioQueueEnqueueBuffer failed with $result")
     end
-    return nSamples
 end
 
 function enqueueBuffer(userData, buf)
     if userData.offset >= userData.nSamples
         return false
     end
-    const rng = userData.offset:userData.nSamples
-    const nchans = size(userData.samples, 2)
-    const samples = sub(userData.samples, tuple(rng, @compat ntuple(_->:, nchans - 1)...)...)
-    const samplesEnqueued = AudioQueueEnqueueBuffer(userData.aq, buf, samples)
-    userData.offset += samplesEnqueued
+    nsamples::Int = 512
+    for i in (ndims(userData.samples) - 1)
+        nsamples /= size(userData.samples, i + 1)
+    end
+    nsamples -= 1
+    end_offset = min(userData.offset + nsamples, userData.nSamples)
+    idx = ntuple(i -> i > 1 ? colon(1, size(userData.samples, i)) : userData.offset:end_offset,
+                 ndims(userData.samples))
+    AudioQueueEnqueueBuffer(userData.aq, buf, getindex(userData.samples, idx...))
+    userData.offset = end_offset
     userData.nBuffersEnqueued += 1
     return true
 end
@@ -363,3 +369,4 @@ function wavplay(data, fs)
     CFRunLoopRun()
     AudioQueueDispose(userData.aq, true)
 end
+end # module

@@ -1,4 +1,6 @@
 # -*- mode: julia; -*-
+module WAVPlay
+import WAV.wavplay
 immutable PulseSample
     format::Int32
     rate::Uint32
@@ -25,3 +27,4 @@ function wavplay(data, fs)
         (Ptr{Void}, Ptr{Cint}), s, err))
     nothing
 end
+end # module

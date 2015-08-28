@@ -1,4 +1,5 @@
 # -*- mode: julia; -*-
+VERSION >= v"0.4.0-dev+6521" && Base.__precompile__(true)
 module WAV
 export wavread, wavwrite, wavappend, wavplay
 export WAVArray, WAVFormatExtension, WAVFormat
@@ -7,17 +8,20 @@ export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MU
 import Base.unbox, Base.box
 using Compat
 
-if Libdl.find_library(["libpulse-simple"]) != ""
-    include("wavplay-pulse.jl")
-elseif Libdl.find_library(["AudioToolbox"],
-                          ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
-    include("wavplay-audioqueue.jl")
-else
-    wavplay() = warn("wavplay is not currently implemented on $OS_NAME")
+function __init__()
+    module_dir = dirname(@__FILE__)
+    if Libdl.find_library(["libpulse-simple"]) != ""
+        include(joinpath(module_dir, "wavplay-pulse.jl"))
+    elseif Libdl.find_library(["AudioToolbox"],
+                              ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
+        include(joinpath(module_dir, "wavplay-audioqueue.jl"))
+    else
+        include(joinpath(module_dir, "wavplay-unsupported.jl"))
+    end
 end
-wavplay(fname) = wavplay(wavread(fname)...)
 
 include("AudioDisplay.jl")
+wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
 write_le(stream::IO, value) = write(stream, htol(value))
