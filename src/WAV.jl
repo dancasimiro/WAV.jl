@@ -5,7 +5,6 @@ export wavread, wavwrite, wavappend, wavplay
 export WAVArray, WAVFormatExtension, WAVFormat
 export isextensible, isformat, bits_per_sample
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
-import Base.unbox, Base.box
 using Compat
 
 function __init__()
