@@ -20,53 +20,9 @@ wavplay(fname) = wavplay(wavread(fname)...)
 include("AudioDisplay.jl")
 
 # The WAV specification states that numbers are written to disk in little endian form.
-write_le(stream::IO, value::UInt8) = write(stream, value)
+write_le(stream::IO, value) = write(stream, htol(value))
+read_le(stream::IO, x::Type) = ltoh(read(stream, x))
 
-function write_le(stream::IO, value::UInt16)
-    write(stream, convert(UInt8, (value & 0x00ff)     ))
-    write(stream, convert(UInt8, (value & 0xff00) >> 8))
-end
-
-function write_le(stream::IO, value::UInt32)
-    write(stream, convert(UInt8, (value & 0x000000ff)      ))
-    write(stream, convert(UInt8, (value & 0x0000ff00) >>  8))
-    write(stream, convert(UInt8, (value & 0x00ff0000) >> 16))
-    write(stream, convert(UInt8, (value & 0xff000000) >> 24))
-end
-
-function write_le(stream::IO, value::UInt64)
-    write(stream, convert(UInt8, (value & 0x00000000000000ff)      ))
-    write(stream, convert(UInt8, (value & 0x000000000000ff00) >>  8))
-    write(stream, convert(UInt8, (value & 0x0000000000ff0000) >> 16))
-    write(stream, convert(UInt8, (value & 0x00000000ff000000) >> 24))
-    write(stream, convert(UInt8, (value & 0x000000ff00000000) >> 32))
-    write(stream, convert(UInt8, (value & 0x0000ff0000000000) >> 40))
-    write(stream, convert(UInt8, (value & 0x00ff000000000000) >> 48))
-    write(stream, convert(UInt8, (value & 0xff00000000000000) >> 56))
-end
-
-write_le(stream::IO, value::Float32) = write_le(stream, box(UInt32, unbox(Float32, value)))
-write_le(stream::IO, value::Float64) = write_le(stream, box(UInt64, unbox(Float64, value)))
-
-read_le(stream::IO, x::Type{UInt8}) = read(stream, x)
-
-function read_le(stream::IO, ::Type{UInt16})
-    const bytes::Array{UInt16, 1} = read(stream, UInt8, 2)
-    (bytes[2] << 8) | bytes[1]
-end
-
-function read_le(stream::IO, ::Type{UInt32})
-    const bytes::Array{UInt32, 1} = read(stream, UInt8, 4)
-    (bytes[4] << 24) | (bytes[3] << 16) | (bytes[2] << 8) | bytes[1]
-end
-
-function read_le(stream::IO, ::Type{UInt64})
-    const bytes::Array{UInt64, 1} = read(stream, UInt8, 8)
-    (bytes[8] << 56) | (bytes[7] << 48) | (bytes[6] << 40) | (bytes[5] << 32) | (bytes[4] << 24) | (bytes[3] << 16) | (bytes[2] << 8) | bytes[1]
-end
-
-read_le(stream::IO, ::Type{Float32}) = box(Float32, unbox(UInt32, read_le(stream, UInt32)))
-read_le(stream::IO, ::Type{Float64}) = box(Float64, unbox(UInt64, read_le(stream, UInt64)))
 
 # used by WAVE_FORMAT_EXTENSIBLE
 immutable WAVFormatExtension
