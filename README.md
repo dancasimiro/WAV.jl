@@ -1,6 +1,8 @@
 WAV.jl
 ======
 
+[![WAV](http://pkg.julialang.org/badges/WAV_0.3.svg)](http://pkg.julialang.org/?pkg=WAV&ver=0.3)
+[![WAV](http://pkg.julialang.org/badges/WAV_0.4.svg)](http://pkg.julialang.org/?pkg=WAV&ver=0.4)
 [![Build Status](https://travis-ci.org/dancasimiro/WAV.jl.png)](https://travis-ci.org/dancasimiro/WAV.jl)
 [![Coverage Status](https://coveralls.io/repos/dancasimiro/WAV.jl/badge.png)](https://coveralls.io/r/dancasimiro/WAV.jl)
 
