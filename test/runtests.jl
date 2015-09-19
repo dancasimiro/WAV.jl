@@ -495,11 +495,18 @@ let
     @test ext[:test] == in_chunks[:test]
 end
 
+### WAVArray
+let
+    io = IOBuffer()
+    wa = WAV.WAVArray(8000, sin(1:256 * 8000.0 / 1024));
+    WAV.writemime(io, "text/html", wa);
+end
+
 ### playback
 let
-    const fs = 5.0
-    t = 1:256;
-    in_data = sin(t * fs / 1024);
-    #WAV.wavplay(in_data, fs);
-    #WAV.wavplay([in_data; in_data], fs);
+    const fs = 44100.0
+    t = 1:44100;
+    in_data = sin(5.0 * t / fs) * 1e-6;
+    WAV.wavplay(in_data, fs);
+    WAV.wavplay([in_data in_data], fs);
 end

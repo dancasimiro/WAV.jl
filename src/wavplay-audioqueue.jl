@@ -188,8 +188,12 @@ function enqueueBuffer(userData, buf)
         return false
     end
     nsamples::Int = 512
-    for i in (ndims(userData.samples) - 1)
-        nsamples /= size(userData.samples, i + 1)
+    chans = ndims(userData.samples)
+    if chans > 2
+        error("Playback of $chans-channel files is not supported")
+    end
+    if chans == 2
+        nsamples /= size(userData.samples, 2)
     end
     nsamples -= 1
     end_offset = min(userData.offset + nsamples, userData.nSamples)
