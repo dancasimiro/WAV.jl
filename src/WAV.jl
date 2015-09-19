@@ -491,7 +491,7 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
     # "format" is the format of values, while "fmt" is the WAV file level format
     convert_to_double = x -> convert(Array{Float64}, x)
 
-    if subrange === Union{}
+    if subrange === Void
         # each block stores fmt.nchannels channels
         subrange = 1:convert(UInt, chunk_size / fmt.block_align)
     end
@@ -581,7 +581,7 @@ end
 make_range(subrange) = subrange
 make_range(subrange::Number) = 1:convert(Int, subrange)
 
-function wavread(io::IO; subrange=Union{}, format="double")
+function wavread(io::IO; subrange=Void, format="double")
     chunk_size = read_header(io)
     samples = Array(Float64)
     nbits = 0
@@ -623,7 +623,7 @@ function wavread(io::IO; subrange=Union{}, format="double")
     return samples, sample_rate, nbits, opt
 end
 
-function wavread(filename::AbstractString; subrange=Union{}, format="double")
+function wavread(filename::AbstractString; subrange=Void, format="double")
     open(filename, "r") do io
         wavread(io, subrange=subrange, format=format)
     end
