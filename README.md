@@ -206,3 +206,6 @@ library in the Julia ecosystem. It supports more file formats
 (including WAV) and implements a more powerful playback
 interface. However, the license is more restrictive (GPL) because
 of a dependence on [libsndfile](http://www.mega-nerd.com/libsndfile/).
+
+Additionally, [FLAC.jl](https://github.com/dmbates/FLAC.jl) includes
+an ```mmap``` based WAV [reader](https://github.com/dmbates/FLAC.jl/blob/master/src/WAV.jl).
