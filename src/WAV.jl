@@ -474,7 +474,7 @@ function write_companded_samples{T<:Integer}(io::IO, samples::Array{T}, compande
     end
 end
 
-function write_companded_samples{T<:FloatingPoint}(io::IO, samples::Array{T}, compander::Function)
+function write_companded_samples{T<:AbstractFloat}(io::IO, samples::Array{T}, compander::Function)
     samples = convert(Array{Int16}, round(samples * typemax(Int16)))
     write_companded_samples(io, samples, compander)
 end
@@ -489,10 +489,9 @@ convert_pcm_to_double{T<:Signed}(samples::Array{T}, nbits::Integer) = convert(Ar
 
 function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
     # "format" is the format of values, while "fmt" is the WAV file level format
-    samples = None
     convert_to_double = x -> convert(Array{Float64}, x)
 
-    if subrange === None
+    if subrange === Union{}
         # each block stores fmt.nchannels channels
         subrange = 1:convert(UInt, chunk_size / fmt.block_align)
     end
@@ -537,7 +536,7 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
     end
 end
 
-function write_pcm_samples{T<:FloatingPoint}(io::IO, fmt::WAVFormat, samples::Array{T})
+function write_pcm_samples{T<:AbstractFloat}(io::IO, fmt::WAVFormat, samples::Array{T})
     const nbits = bits_per_sample(fmt)
     # Scale the floating point values to the PCM range
     if nbits > 8
@@ -582,7 +581,7 @@ end
 make_range(subrange) = subrange
 make_range(subrange::Number) = 1:convert(Int, subrange)
 
-function wavread(io::IO; subrange=None, format="double")
+function wavread(io::IO; subrange=Union{}, format="double")
     chunk_size = read_header(io)
     samples = Array(Float64)
     nbits = 0
@@ -624,19 +623,19 @@ function wavread(io::IO; subrange=None, format="double")
     return samples, sample_rate, nbits, opt
 end
 
-function wavread(filename::String; subrange=None, format="double")
+function wavread(filename::AbstractString; subrange=Union{}, format="double")
     open(filename, "r") do io
         wavread(io, subrange=subrange, format=format)
     end
 end
 
 # These are the MATLAB compatible signatures
-wavread(filename::String, fmt::String) = wavread(filename, format=fmt)
-wavread(filename::String, n) = wavread(filename, subrange=n)
-wavread(filename::String, n, fmt) = wavread(filename, subrange=n, format=fmt)
+wavread(filename::AbstractString, fmt::AbstractString) = wavread(filename, format=fmt)
+wavread(filename::AbstractString, n) = wavread(filename, subrange=n)
+wavread(filename::AbstractString, n, fmt) = wavread(filename, subrange=n, format=fmt)
 
 get_default_compression{T<:Integer}(::Array{T}) = WAVE_FORMAT_PCM
-get_default_compression{T<:FloatingPoint}(::Array{T}) = WAVE_FORMAT_IEEE_FLOAT
+get_default_compression{T<:AbstractFloat}(::Array{T}) = WAVE_FORMAT_IEEE_FLOAT
 get_default_pcm_precision(::Array{UInt8}) = 8
 get_default_pcm_precision(::Array{Int16}) = 16
 get_default_pcm_precision(::Any) = 24
@@ -713,7 +712,7 @@ function wavwrite(samples::Array, io::IO; Fs=8000, nbits=0, compression=0,
     write_data(io, fmt, samples)
 end
 
-function wavwrite(samples::Array, filename::String; Fs=8000, nbits=0, compression=0,
+function wavwrite(samples::Array, filename::AbstractString; Fs=8000, nbits=0, compression=0,
                   chunks::Dict{Symbol, Array{UInt8,1}}=Dict{Symbol, Array{UInt8,1}}())
     open(filename, "w") do io
         wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression, chunks=chunks)
@@ -748,21 +747,21 @@ function wavappend(samples::Array, io::IO)
     write_data(io, fmt, samples)
 end
 
-function wavappend(samples::Array, filename::String)
+function wavappend(samples::Array, filename::AbstractString)
     open(filename, "rwa") do io
         wavappend(samples,io)
     end
 end
 
-wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, Fs=f)
-wavwrite(y::Array, f::Real, n::Real, filename::String) = wavwrite(y, filename, Fs=f, nbits=n)
+wavwrite(y::Array, f::Real, filename::AbstractString) = wavwrite(y, filename, Fs=f)
+wavwrite(y::Array, f::Real, n::Real, filename::AbstractString) = wavwrite(y, filename, Fs=f, nbits=n)
 
 # support for writing native arrays...
 wavwrite{T<:Integer}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8)
-wavwrite{T<:Integer}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8)
+wavwrite{T<:Integer}(y::Array{T}, filename::AbstractString) = wavwrite(y, filename, nbits=sizeof(T)*8)
 wavwrite(y::Array{Int32}, io::IO) = wavwrite(y, io, nbits=24)
-wavwrite(y::Array{Int32}, filename::String) = wavwrite(y, filename, nbits=24)
-wavwrite{T<:FloatingPoint}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
-wavwrite{T<:FloatingPoint}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+wavwrite(y::Array{Int32}, filename::AbstractString) = wavwrite(y, filename, nbits=24)
+wavwrite{T<:AbstractFloat}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+wavwrite{T<:AbstractFloat}(y::Array{T}, filename::AbstractString) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
 
 end # module

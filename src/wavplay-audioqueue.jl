@@ -334,7 +334,7 @@ end
 
 function getFormatFlags(el)
     flags = kAudioFormatFlagsAreAllClear
-    if el <: FloatingPoint
+    if el <: AbstractFloat
         flags |= kAudioFormatFlagIsFloat
     elseif el <: Integer
         flags |= kAudioFormatFlagIsSignedInteger

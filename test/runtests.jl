@@ -135,9 +135,9 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
 
     ## Check for the common header identifiers
     seek(io, 0)
-    @assert read(io, Uint8, 4) == b"RIFF"
-    @assert WAV.read_le(io, Uint32) == file_size - 8
-    @assert read(io, Uint8, 4) == b"WAVE"
+    @assert read(io, UInt8, 4) == b"RIFF"
+    @assert WAV.read_le(io, UInt32) == file_size - 8
+    @assert read(io, UInt8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
@@ -212,7 +212,7 @@ x, fs, nbits, extra = WAV.wavread(io)
 
 ## Test native encoding of 8 bits
 for nchans = (1,2,4)
-    in_data_8 = reshape(typemin(Uint8):typemax(Uint8), (trunc(Int, 256 / nchans), nchans))
+    in_data_8 = reshape(typemin(UInt8):typemax(UInt8), (trunc(Int, 256 / nchans), nchans))
     io = IOBuffer()
     WAV.wavwrite(in_data_8, io)
 
@@ -346,9 +346,9 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
 
     ## Check for the common header identifiers
     seek(io, 0)
-    @assert read(io, Uint8, 4) == b"RIFF"
-    @assert WAV.read_le(io, Uint32) == file_size - 8
-    @assert read(io, Uint8, 4) == b"WAVE"
+    @assert read(io, UInt8, 4) == b"RIFF"
+    @assert WAV.read_le(io, UInt32) == file_size - 8
+    @assert read(io, UInt8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
@@ -423,9 +423,9 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
 
     ## Check for the common header identifiers
     seek(io, 0)
-    @assert read(io, Uint8, 4) == b"RIFF"
-    @assert WAV.read_le(io, Uint32) == file_size - 8
-    @assert read(io, Uint8, 4) == b"WAVE"
+    @assert read(io, UInt8, 4) == b"RIFF"
+    @assert WAV.read_le(io, UInt32) == file_size - 8
+    @assert read(io, UInt8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
@@ -493,4 +493,13 @@ let
 
     @test haskey(ext, :test) == true
     @test ext[:test] == in_chunks[:test]
+end
+
+### playback
+let
+    const fs = 5.0
+    t = 1:256;
+    in_data = sin(t * fs / 1024);
+    #WAV.wavplay(in_data, fs);
+    #WAV.wavplay([in_data; in_data], fs);
 end
