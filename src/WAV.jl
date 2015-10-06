@@ -20,6 +20,7 @@ function __init__()
 end
 
 include("AudioDisplay.jl")
+include("wav-fileio.jl")
 wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
