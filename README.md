@@ -4,7 +4,7 @@ WAV.jl
 [![WAV](http://pkg.julialang.org/badges/WAV_0.3.svg)](http://pkg.julialang.org/?pkg=WAV&ver=0.3)
 [![WAV](http://pkg.julialang.org/badges/WAV_0.4.svg)](http://pkg.julialang.org/?pkg=WAV&ver=0.4)
 [![Build Status](https://travis-ci.org/dancasimiro/WAV.jl.png)](https://travis-ci.org/dancasimiro/WAV.jl)
-[![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/dancasimiro/wav.jl?branch=master&svg=true)]https://ci.appveyor.com/project/dancasimiro/wav-jl)
+[![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/dancasimiro/wav.jl?branch=master&svg=true)](https://ci.appveyor.com/project/dancasimiro/wav-jl)
 [![Coverage Status](https://coveralls.io/repos/dancasimiro/WAV.jl/badge.png)](https://coveralls.io/r/dancasimiro/WAV.jl)
 
 This is a Julia package to read and write the WAV audio file format.
