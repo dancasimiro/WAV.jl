@@ -220,8 +220,10 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     samples = Array(pcm_container_type(nbits), length(subrange), fmt.nchannels)
     const nbytes = ceil(Integer, nbits / 8)
     const bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
-    const mask = @compat UInt64(0x1) << (nbits - 1)
-    const signextend_mask = ~(@compat UInt64(0x0)) << nbits
+    mask = @compat UInt64(0x1) << (nbits - 1)
+    if nbits <= 8
+        mask = @compat UInt64(0)
+    end
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
@@ -232,9 +234,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
             end
             my_sample >>= nbytes * 8 - nbits
             # sign extend negative values
-            if nbits > 8 && (my_sample & mask > 0)
-                my_sample |= signextend_mask
-            end
+            my_sample = (my_sample $ mask) - mask
             samples[i, j] = convert(eltype(samples), signed(my_sample))
         end
     end
@@ -520,7 +520,6 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
     const nbits = bits_per_sample(fmt)
     # number of bytes per sample
     const nbytes = ceil(Integer, nbits / 8)
-    const bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
     const minval = nbits > 8 ? -2^(nbits - 1) : -2^(nbits)
     const maxval = nbits > 8 ? 2^(nbits - 1) - 1 : 2^(nbits) - 1
     for i = 1:size(samples, 1)
@@ -528,10 +527,9 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
             my_sample = clamp(samples[i, j], minval, maxval)
             # shift my_sample into the N most significant bits
             my_sample <<= nbytes * 8 - nbits
-            mask = convert(typeof(my_sample), 0xff)
             for k = 1:nbytes
-                write_le(io, convert(UInt8, (my_sample & mask) >> bitshift[k]))
-                mask <<= 8
+                write_le(io, convert(UInt8, my_sample & 0xff))
+                my_sample = my_sample >> 8
             end
         end
     end
