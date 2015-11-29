@@ -520,7 +520,6 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
     const nbits = bits_per_sample(fmt)
     # number of bytes per sample
     const nbytes = ceil(Integer, nbits / 8)
-    const bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
     const minval = nbits > 8 ? -2^(nbits - 1) : -2^(nbits)
     const maxval = nbits > 8 ? 2^(nbits - 1) - 1 : 2^(nbits) - 1
     for i = 1:size(samples, 1)
@@ -528,10 +527,9 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Array{T}
             my_sample = clamp(samples[i, j], minval, maxval)
             # shift my_sample into the N most significant bits
             my_sample <<= nbytes * 8 - nbits
-            mask = convert(typeof(my_sample), 0xff)
             for k = 1:nbytes
-                write_le(io, convert(UInt8, (my_sample & mask) >> bitshift[k]))
-                mask <<= 8
+                write_le(io, convert(UInt8, my_sample & 0xff))
+                my_sample = my_sample >> 8
             end
         end
     end
