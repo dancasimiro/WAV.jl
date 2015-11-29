@@ -539,10 +539,10 @@ function write_pcm_samples{T<:AbstractFloat}(io::IO, fmt::WAVFormat, samples::Ar
     # Scale the floating point values to the PCM range
     if nbits > 8
         # two's complement
-        samples = convert(Array{pcm_container_type(nbits)}, round(samples * (2^(nbits - 1) - 1)))
+        samples = convert(Array{pcm_container_type(nbits)}, round(samples * (2.0^(nbits - 1) - 1)))
     else
         # offset binary
-        samples = convert(Array{UInt8}, round((samples .+ 1.0) / 2.0 * (2^nbits - 1)))
+        samples = convert(Array{UInt8}, round((samples .+ 1.0) / 2.0 * (2.0^nbits - 1)))
     end
     return write_pcm_samples(io, fmt, samples)
 end
