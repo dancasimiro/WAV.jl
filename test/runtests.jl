@@ -122,7 +122,7 @@ end
 for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,24,32,64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:4
     ## Test wav files
     ## The tolerance is based on the number of bits used to encode the file in wavwrite
-    tol = 2.0 / (2.0^nbits - 1)
+    tol = 2.0 / (2.0^(nbits - 1))
 
     in_data = rand(nsamples, nchans)
     if nsamples > 0
