@@ -228,7 +228,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
             raw_sample = read(io, UInt8, nbytes)
-            my_sample = unsigned(0)
+            my_sample = @compat UInt64(0)
             for k = 1:nbytes
                 my_sample |= convert(UInt64, raw_sample[k]) << bitshift[k]
             end
