@@ -218,6 +218,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
         return Array(pcm_container_type(nbits), 0, fmt.nchannels)
     end
     samples = Array(pcm_container_type(nbits), length(subrange), fmt.nchannels)
+    sample_type = eltype(samples)
     const nbytes = ceil(Integer, nbits / 8)
     const bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
     mask = @compat UInt64(0x1) << (nbits - 1)
@@ -235,7 +236,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
             my_sample >>= nbytes * 8 - nbits
             # sign extend negative values
             my_sample = (my_sample $ mask) - mask
-            samples[i, j] = convert(eltype(samples), signed(my_sample))
+            samples[i, j] = convert(sample_type, signed(my_sample))
         end
     end
     samples
