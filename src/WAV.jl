@@ -5,6 +5,7 @@ export wavread, wavwrite, wavappend, wavplay
 export WAVArray, WAVFormatExtension, WAVFormat
 export isextensible, isformat, bits_per_sample
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
+using FileIO
 using Compat
 
 function __init__()
@@ -761,5 +762,9 @@ wavwrite(y::AbstractArray{Int32}, io::IO) = wavwrite(y, io, nbits=24)
 wavwrite(y::AbstractArray{Int32}, filename::AbstractString) = wavwrite(y, filename, nbits=24)
 wavwrite{T<:AbstractFloat}(y::AbstractArray{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
 wavwrite{T<:AbstractFloat}(y::AbstractArray{T}, filename::AbstractString) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+
+# FileIO integration support
+load(f::File{format"WAV"}; kwargs...) = wavread(f.filename; kwargs...)
+save(f::File{format"WAV"}, data; kwargs...) = wavwrite(data, f.filename; kwargs...)
 
 end # module
