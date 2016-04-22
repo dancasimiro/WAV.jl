@@ -21,7 +21,6 @@ function __init__()
 end
 
 include("AudioDisplay.jl")
-include("wav-fileio.jl")
 wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
@@ -764,6 +763,9 @@ wavwrite{T<:AbstractFloat}(y::AbstractArray{T}, io::IO) = wavwrite(y, io, nbits=
 wavwrite{T<:AbstractFloat}(y::AbstractArray{T}, filename::AbstractString) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
 
 # FileIO integration support
+load(s::Stream{format"WAV"}; kwargs...) = wavread(s.io; kwargs...)
+save(s::Stream{format"WAV"}, data; kwargs...) = wavwrite(data, s.io; kwargs...)
+
 load(f::File{format"WAV"}; kwargs...) = wavread(f.filename; kwargs...)
 save(f::File{format"WAV"}, data; kwargs...) = wavwrite(data, f.filename; kwargs...)
 
