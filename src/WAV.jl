@@ -109,7 +109,7 @@ function isformat(fmt::WAVFormat, code)
     return fmt.compression_code == code
 end
 
-function WAVFormatExtension(bytes::AbstractArray{UInt8})
+function WAVFormatExtension(bytes)
     if isempty(bytes)
         return WAVFormatExtension()
     end
