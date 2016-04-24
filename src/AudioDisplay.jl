@@ -3,7 +3,7 @@ using Compat
 
 type WAVArray{T,N}
     Fs::Number
-    data::Array{T,N}
+    data::AbstractArray{T,N}
 end
 
 wavwrite(x::WAVArray, io::IO) = wavwrite(x.data, io; Fs=x.Fs)
