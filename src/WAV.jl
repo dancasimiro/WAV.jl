@@ -615,7 +615,7 @@ function wavread(io::IO; subrange=Void, format="double")
             end
             samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
-            opt[Symbol(subchunk_id)] = read(io, UInt8, subchunk_size)
+            opt[@compat Symbol(subchunk_id)] = read(io, UInt8, subchunk_size)
         end
     end
     return samples, sample_rate, nbits, opt
