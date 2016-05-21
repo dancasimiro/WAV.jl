@@ -1,7 +1,6 @@
 WAV.jl
 ======
 
-[![WAV](http://pkg.julialang.org/badges/WAV_0.3.svg)](http://pkg.julialang.org/?pkg=WAV&ver=0.3)
 [![WAV](http://pkg.julialang.org/badges/WAV_0.4.svg)](http://pkg.julialang.org/?pkg=WAV&ver=0.4)
 [![Build Status](https://travis-ci.org/dancasimiro/WAV.jl.png)](https://travis-ci.org/dancasimiro/WAV.jl)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/dancasimiro/wav.jl?branch=master&svg=true)](https://ci.appveyor.com/project/dancasimiro/wav-jl)
