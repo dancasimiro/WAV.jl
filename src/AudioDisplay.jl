@@ -1,4 +1,4 @@
-import Base.writemime
+import Base.show
 using Compat
 import Compat.String
 
@@ -9,7 +9,7 @@ end
 
 wavwrite(x::WAVArray, io::IO) = wavwrite(x.data, io; Fs=x.Fs)
 
-function writemime(io::IO, ::MIME"text/html", x::WAVArray)
+function show(io::IO, ::MIME"text/html", x::WAVArray)
     buf = IOBuffer()
     wavwrite(x, buf)
     data = base64encode(@compat String(buf))

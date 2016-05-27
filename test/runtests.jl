@@ -499,7 +499,7 @@ end
 let
     io = IOBuffer()
     wa = WAV.WAVArray(8000, sin(1:256 * 8000.0 / 1024));
-    WAV.writemime(io, "text/html", wa);
+    WAV.show(io, "text/html", wa);
 end
 
 ### playback
