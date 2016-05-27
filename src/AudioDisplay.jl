@@ -1,5 +1,6 @@
 import Base.writemime
-using Compat; import Compat.String
+using Compat
+import Compat.String
 
 type WAVArray{T,N}
     Fs::Number
@@ -11,7 +12,7 @@ wavwrite(x::WAVArray, io::IO) = wavwrite(x.data, io; Fs=x.Fs)
 function writemime(io::IO, ::MIME"text/html", x::WAVArray)
     buf = IOBuffer()
     wavwrite(x, buf)
-    data = base64encode(String(buf))
+    data = base64encode(@compat String(buf))
     markup = """<audio controls="controls" {autoplay}>
                 <source src="data:audio/wav;base64,$data" type="audio/wav" />
                 Your browser does not support the audio element.
