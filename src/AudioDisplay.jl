@@ -1,6 +1,6 @@
-import Base.show
 using Compat
 import Compat.String
+@compat import Base.show
 
 type WAVArray{T,N}
     Fs::Number
@@ -9,7 +9,7 @@ end
 
 wavwrite(x::WAVArray, io::IO) = wavwrite(x.data, io; Fs=x.Fs)
 
-function show(io::IO, ::MIME"text/html", x::WAVArray)
+@compat function show(io::IO, ::MIME"text/html", x::WAVArray)
     buf = IOBuffer()
     wavwrite(x, buf)
     data = base64encode(@compat String(buf))

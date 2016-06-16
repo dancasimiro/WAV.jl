@@ -3,6 +3,7 @@
 import WAV
 using Base.Test
 using Compat
+using Compat.String
 
 # These float array comparison functions are from dists.jl
 function absdiff{T<:Real}(current::AbstractArray{T}, target::AbstractArray{T})
@@ -496,10 +497,19 @@ let
 end
 
 ### WAVArray
+type TestHtmlDisplay <: Display
+    io::IOBuffer
+end
+function display(d::TestHtmlDisplay, ::MIME"text/html", x)
+    print(d.io, "rich display text works")
+end
+
 let
     io = IOBuffer()
     wa = WAV.WAVArray(8000, sin(1:256 * 8000.0 / 1024));
-    WAV.show(io, "text/html", wa);
+    myio = IOBuffer()
+    display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
+    @test @compat String(myio) == "rich display text works"
 end
 
 ### playback
