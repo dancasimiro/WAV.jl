@@ -500,8 +500,8 @@ end
 type TestHtmlDisplay <: Display
     io::IOBuffer
 end
-function display(d::TestHtmlDisplay, ::MIME"text/html", x)
-    print(d.io, "rich display text works")
+function display(d::TestHtmlDisplay, mime::MIME"text/html", x)
+    print(d.io, reprmime(mime, x))
 end
 
 let
@@ -509,7 +509,7 @@ let
     wa = WAV.WAVArray(8000, sin(1:256 * 8000.0 / 1024));
     myio = IOBuffer()
     display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
-    @test @compat String(myio) == "rich display text works"
+    @test @compat ismatch(r"audio controls", String(myio))
 end
 
 ### playback
