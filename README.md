@@ -23,7 +23,7 @@ generates some data, writes it to a file and then reads the data back.
 
 ```jlcon
 julia> using WAV
-julia> x = [0:7999]
+julia> x = [0:7999;]
 julia> y = sin(2 * pi * x / 8000)
 julia> wavwrite(y, "example.wav", Fs=8000)
 julia> y, fs = wavread("example.wav")

@@ -746,7 +746,7 @@ function wavappend(samples::AbstractArray, io::IO)
 end
 
 function wavappend(samples::AbstractArray, filename::AbstractString)
-    open(filename, "rwa") do io
+    open(filename, "a+") do io
         wavappend(samples,io)
     end
 end

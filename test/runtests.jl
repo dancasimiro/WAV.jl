@@ -34,6 +34,18 @@ let
     y, Fs = WAV.wavread(io)
 end
 
+let
+    x = [0:7999;]
+    y = sin(2 * pi * x / 8000)
+    WAV.wavwrite(y, "example.wav", Fs=8000)
+    y, Fs = WAV.wavread("example.wav")
+    y = cos(2 * pi * x / 8000)
+    WAV.wavappend(y, "example.wav")
+    y, Fs = WAV.wavread("example.wav")
+    @test length(y) == (2 * length(x))
+    rm("example.wav")
+end
+
 ## default arguments, GitHub Issue #10
 let
     tmp=rand(Float32,(10,2))
