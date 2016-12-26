@@ -8,11 +8,11 @@ using Compat.String
 # These float array comparison functions are from dists.jl
 function absdiff{T<:Real}(current::AbstractArray{T}, target::AbstractArray{T})
     @assert all(size(current) == size(target))
-    maximum(abs(current - target))
+    maximum(@compat abs.(current - target))
 end
 
 function reldiff{T<:Real}(current::T, target::T)
-    abs((current - target)/(bool(target) ? target : 1))
+    @compat abs.((current - target)/(bool(target) ? target : 1))
 end
 
 function reldiff{T<:Real}(current::AbstractArray{T}, target::AbstractArray{T})
@@ -23,12 +23,12 @@ end
 ## example from README, modified to use an IO buffer
 let
     x = [0:7999;]
-    y = sin(2 * pi * x / 8000)
+    y = @compat sin.(2 * pi * x / 8000)
     io = IOBuffer()
     WAV.wavwrite(y, io, Fs=8000)
     seek(io, 0)
     y, Fs = WAV.wavread(io)
-    y = cos(2 * pi * x / 8000)
+    y = @compat cos.(2 * pi * x / 8000)
     WAV.wavappend(y, io)
     seek(io, 0)
     y, Fs = WAV.wavread(io)
@@ -36,10 +36,10 @@ end
 
 let
     x = [0:7999;]
-    y = sin(2 * pi * x / 8000)
+    y = @compat sin.(2 * pi * x / 8000)
     WAV.wavwrite(y, "example.wav", Fs=8000)
     y, Fs = WAV.wavread("example.wav")
-    y = cos(2 * pi * x / 8000)
+    y = @compat cos.(2 * pi * x / 8000)
     WAV.wavappend(y, "example.wav")
     y, Fs = WAV.wavread("example.wav")
     @test length(y) == (2 * length(x))
@@ -518,7 +518,7 @@ end
 
 let
     io = IOBuffer()
-    wa = WAV.WAVArray(8000, sin(1:256 * 8000.0 / 1024));
+    wa = WAV.WAVArray(8000, @compat sin.(1:256 * 8000.0 / 1024));
     myio = IOBuffer()
     display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
     @test @compat ismatch(r"audio controls", String(myio))
@@ -529,7 +529,7 @@ end
 let
     const fs = 44100.0
     t = 1:44100;
-    in_data = sin(5.0 * t / fs) * 1e-6;
+    in_data = @compat sin.(5.0 * t / fs) * 1e-6;
     #WAV.wavplay(in_data, fs);
     #WAV.wavplay([in_data in_data], fs);
 end

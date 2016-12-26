@@ -235,7 +235,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
             end
             my_sample >>= nbytes * 8 - nbits
             # sign extend negative values
-            my_sample = (my_sample $ mask) - mask
+            my_sample = xor(my_sample, mask) - mask
             samples[i, j] = convert(sample_type, signed(my_sample))
         end
     end
@@ -463,7 +463,7 @@ function compress_sample_alaw(sample)
     else
         compressedByte = (sample >>> 4) & 0xff
     end
-    compressedByte $= (sampleSign $ 0x55)
+    compressedByte = xor(xor(sampleSign, 0x55), compressedByte)
     @compat UInt8(compressedByte & 0xff)
 end
 
@@ -477,7 +477,7 @@ function write_companded_samples{T<:Integer}(io::IO, samples::AbstractArray{T}, 
 end
 
 function write_companded_samples{T<:AbstractFloat}(io::IO, samples::AbstractArray{T}, compander::Function)
-    samples = convert(Array{Int16}, round(samples * typemax(Int16)))
+    samples = convert(Array{Int16}, @compat round.(samples * typemax(Int16)))
     write_companded_samples(io, samples, compander)
 end
 
@@ -539,10 +539,10 @@ function write_pcm_samples{T<:AbstractFloat}(io::IO, fmt::WAVFormat, samples::Ab
     # Scale the floating point values to the PCM range
     if nbits > 8
         # two's complement
-        samples = convert(Array{pcm_container_type(nbits)}, round(samples * (2.0^(nbits - 1) - 1)))
+        samples = convert(Array{pcm_container_type(nbits)}, @compat round.(samples * (2.0^(nbits - 1) - 1)))
     else
         # offset binary
-        samples = convert(Array{UInt8}, round((samples .+ 1.0) / 2.0 * (2.0^nbits - 1)))
+        samples = convert(Array{UInt8}, @compat round.((samples .+ 1.0) / 2.0 * (2.0^nbits - 1)))
     end
     return write_pcm_samples(io, fmt, samples)
 end
