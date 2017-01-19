@@ -33,7 +33,7 @@ immutable WAVFormatExtension
     nbits::UInt16 # overrides nbits in WAVFormat type
     channel_mask::UInt32
     sub_format::Array{UInt8, 1} # 16 byte GUID
-    WAVFormatExtension() = new(0, 0, Array(UInt8, 0))
+    WAVFormatExtension() = new(0, 0, Array{UInt8, 1}(0))
     WAVFormatExtension(nb, cm, sb) = new(nb, cm, sb)
 end
 
@@ -92,7 +92,7 @@ const KSDATAFORMAT_SUBTYPE_ALAW = [
 
 function isformat(fmt::WAVFormat, code)
     if code != WAVE_FORMAT_EXTENSIBLE && isextensible(fmt)
-        subtype = Array(UInt8, 0)
+        subtype = Array{UInt8, 1}(0)
         if code == WAVE_FORMAT_PCM
             subtype = KSDATAFORMAT_SUBTYPE_PCM
         elseif code == WAVE_FORMAT_IEEE_FLOAT
@@ -157,7 +157,7 @@ function read_format(io::IO, chunk_size::UInt32)
     const bytes_per_second = read_le(io, UInt32)
     const block_align = read_le(io, UInt16)
     const nbits = read_le(io, UInt16)
-    ext = Array(UInt8, 0)
+    ext = Array{UInt8, 1}(0)
     chunk_size -= 16
     if chunk_size > 0
         const extra_bytes_length = read_le(io, UInt16)
@@ -215,9 +215,9 @@ ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float
 function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     const nbits = bits_per_sample(fmt)
     if isempty(subrange)
-        return Array(pcm_container_type(nbits), 0, fmt.nchannels)
+        return Array{pcm_container_type(nbits), 2}(0, fmt.nchannels)
     end
-    samples = Array(pcm_container_type(nbits), length(subrange), fmt.nchannels)
+    samples = Array{pcm_container_type(nbits), 2}(length(subrange), fmt.nchannels)
     sample_type = eltype(samples)
     const nbytes = ceil(Integer, nbits / 8)
     const bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
@@ -244,10 +244,10 @@ end
 
 function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, floatType)
     if isempty(subrange)
-        return Array(floatType, 0, fmt.nchannels)
+        return Array{floatType, 2}(0, fmt.nchannels)
     end
     const nblocks = length(subrange)
-    samples = Array(floatType, nblocks, fmt.nchannels)
+    samples = Array{floatType, 2}(nblocks, fmt.nchannels)
     const nbits = bits_per_sample(fmt)
     skip(io, convert(UInt, (first(subrange) - 1) * (nbits / 8) * fmt.nchannels))
     for i = 1:nblocks
@@ -266,10 +266,10 @@ end
 
 function read_companded_samples(io::IO, fmt::WAVFormat, subrange, table)
     if isempty(subrange)
-        return Array(eltype(table), 0, fmt.nchannels)
+        return Array{eltype(table), 2}(0, fmt.nchannels)
     end
     const nblocks = length(subrange)
-    samples = Array(eltype(table), nblocks, fmt.nchannels)
+    samples = Array{eltype(table), 2}(nblocks, fmt.nchannels)
     skip(io, convert(UInt, (first(subrange) - 1) * fmt.nchannels))
     for i = 1:nblocks
         for j = 1:fmt.nchannels
@@ -581,7 +581,7 @@ make_range(subrange::Number) = 1:convert(Int, subrange)
 
 function wavread(io::IO; subrange=Void, format="double")
     chunk_size = read_header(io)
-    samples = Array(Float64)
+    samples = Array{Float64, 1}()
     nbits = 0
     sample_rate = @compat Float32(0.0)
     opt = Dict{Symbol, Any}()
@@ -670,7 +670,7 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
         compression_code = WAVE_FORMAT_EXTENSIBLE
         const valid_bits_per_sample = nbits
         const channel_mask = 0
-        sub_format = Array(UInt8, 0)
+        sub_format = Array{UInt8, 1}(0)
         if compression == WAVE_FORMAT_PCM
             sub_format = KSDATAFORMAT_SUBTYPE_PCM
         elseif compression == WAVE_FORMAT_IEEE_FLOAT
