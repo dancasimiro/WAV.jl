@@ -3,11 +3,11 @@ module WAVPlay
 import WAV.wavplay
 using Compat
 
-typealias OSStatus Int32
-typealias CFTypeRef Ptr{Void}
-typealias CFRunLoopRef Ptr{Void}
-typealias CFStringRef Ptr{Void}
-typealias AudioQueueRef Ptr{Void}
+@compat const OSStatus = Int32
+@compat const CFTypeRef = Ptr{Void}
+@compat const CFRunLoopRef = Ptr{Void}
+@compat const CFStringRef = Ptr{Void}
+@compat const AudioQueueRef = Ptr{Void}
 
 # format IDs
 const kAudioFormatLinearPCM = # "lpcm"
@@ -70,7 +70,7 @@ type AudioQueueBuffer
     mPacketDescriptionCount::UInt32
 end
 
-typealias AudioQueueBufferRef Ptr{AudioQueueBuffer}
+@compat const AudioQueueBufferRef = Ptr{AudioQueueBuffer}
 
 const kNumberBuffers = 3
 const CoreFoundation =

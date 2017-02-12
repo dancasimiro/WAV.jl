@@ -72,7 +72,7 @@ immutable pa_buffer_attr
     fragsize::UInt32
 end
 
-typealias pa_simple Ptr{Void}
+@compat const pa_simple = Ptr{Void}
 const LibPulseSimple = "libpulse-simple"
 const PA_STREAM_PLAYBACK = 1
 const PA_CHANNEL_MAP_AIFF = 0
