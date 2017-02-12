@@ -84,7 +84,7 @@ function wavplay(data, fs)
 
     # Manually layout the samples.
     # convert doesn't lay out the samples as pulse audio expects
-    samples = Array{Float32}(size(data, 1) * size(data, 2))
+    samples = Array{Float32, 1}(size(data, 1) * size(data, 2))
     idx = 1
     for i = 1:size(data, 1)
         for j = 1:size(data, 2)
