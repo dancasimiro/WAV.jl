@@ -29,7 +29,7 @@ read_le(stream::IO, x::Type) = ltoh(read(stream, x))
 
 
 # used by WAVE_FORMAT_EXTENSIBLE
-@compat struct WAVFormatExtension
+immutable WAVFormatExtension
     nbits::UInt16 # overrides nbits in WAVFormat type
     channel_mask::UInt32
     sub_format::Array{UInt8, 1} # 16 byte GUID
@@ -38,7 +38,7 @@ read_le(stream::IO, x::Type) = ltoh(read(stream, x))
 end
 
 # Required WAV Chunk; The format chunk describes how the waveform data is stored
-@compat struct WAVFormat
+immutable WAVFormat
     compression_code::UInt16
     nchannels::UInt16
     sample_rate::UInt32

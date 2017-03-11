@@ -27,13 +27,13 @@ const kAudioFormatFlagIsNonMixable          = (1 << 6)
 const kAudioFormatFlagsAreAllClear          = (1 << 31)
 
 # Apple Core Audio Type
-@compat struct AudioStreamPacketDescription
+immutable AudioStreamPacketDescription
     mStartOffset::Int64
     mVariableFramesInPacket::UInt32
     mDataByteSize::UInt32
 end
 
-@compat struct SMPETime
+immutable SMPETime
     mSubframes::Int16
     mSubframeDivisor::Int16
     mCounter::UInt32
@@ -47,7 +47,7 @@ end
     SMPETime() = new(0, 0, 0, 0, 0, 0, 0, 0, 0)
 end
 
-@compat struct AudioTimeStamp
+immutable AudioTimeStamp
     mSampleTime::Float64
     mHostTime::UInt64
     mRateScalar::Float64
@@ -60,7 +60,7 @@ end
 end
 
 # Apple Core Audio Type
-@compat mutable struct AudioQueueBuffer
+type AudioQueueBuffer
     mAudioDataBytesCapacity::UInt32
     mAudioData::Ptr{Void}
     mAudioDataByteSize::UInt32
@@ -85,7 +85,7 @@ getCoreFoundationRunLoopDefaultMode() =
     unsafe_load(cglobal((:kCFRunLoopDefaultMode, CoreFoundation), CFStringRef))
 
 # Apple Core Audio Type
-@compat struct AudioStreamBasicDescription
+immutable AudioStreamBasicDescription
     mSampleRate::Float64
     mFormatID::UInt32
     mFormatFlags::UInt32
@@ -109,7 +109,7 @@ getCoreFoundationRunLoopDefaultMode() =
                                                       0)
 end
 
-@compat mutable struct AudioQueueData
+type AudioQueueData
     samples::Array
     aq::AudioQueueRef
     offset::Int

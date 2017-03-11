@@ -18,13 +18,13 @@ const PA_SAMPLE_S24BE     = 10 # Signed 24 Bit PCM packed, big endian. \since 0.
 const PA_SAMPLE_S24_32LE  = 11 # Signed 24 Bit PCM in LSB of 32 Bit words, little endian (PC). \since 0.9.15
 const PA_SAMPLE_S24_32BE  = 12 # Signed 24 Bit PCM in LSB of 32 Bit words, big endian. \since 0.9.15
 
-@compat struct pa_sample_spec
+immutable pa_sample_spec
     format::Int32
     rate::UInt32
     channels::UInt8
 end
 
-@compat struct pa_channel_map
+immutable pa_channel_map
     channels::UInt8
 
     # map data (max 32 channels)
@@ -64,7 +64,7 @@ end
     pa_channel_map() = new(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
 end
 
-@compat struct pa_buffer_attr
+immutable pa_buffer_attr
     maxlength::UInt32
     tlength::UInt32
     prebuf::UInt32
