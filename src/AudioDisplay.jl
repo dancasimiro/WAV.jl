@@ -2,7 +2,7 @@ using Compat
 import Compat.String
 @compat import Base.show
 
-type WAVArray{T,N}
+struct WAVArray{T,N}
     Fs::Number
     data::AbstractArray{T,N}
 end

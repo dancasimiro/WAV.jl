@@ -509,7 +509,7 @@ let
 end
 
 ### WAVArray
-type TestHtmlDisplay <: Display
+struct TestHtmlDisplay <: Display
     io::IOBuffer
 end
 function display(d::TestHtmlDisplay, mime::MIME"text/html", x)
