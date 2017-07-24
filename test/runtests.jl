@@ -130,6 +130,12 @@ let
     @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
 end
 
+function testread{T<:Real}(io, ::Type{T}, sz)
+    a = Array{T}(sz)
+    read!(io, a)
+    return a
+end
+
 ## Test wavread and wavwrite
 ## Generate some wav files for writing and reading
 for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,24,32,64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:4
@@ -148,9 +154,9 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
 
     ## Check for the common header identifiers
     seek(io, 0)
-    @test read(io, UInt8, 4) == b"RIFF"
+    @test testread(io, UInt8, 4) == b"RIFF"
     @test WAV.read_le(io, UInt32) == file_size - 8
-    @test read(io, UInt8, 4) == b"WAVE"
+    @test testread(io, UInt8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
@@ -359,9 +365,9 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
 
     ## Check for the common header identifiers
     seek(io, 0)
-    @test read(io, UInt8, 4) == b"RIFF"
+    @test testread(io, UInt8, 4) == b"RIFF"
     @test WAV.read_le(io, UInt32) == file_size - 8
-    @test read(io, UInt8, 4) == b"WAVE"
+    @test testread(io, UInt8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
@@ -436,9 +442,9 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
 
     ## Check for the common header identifiers
     seek(io, 0)
-    @test read(io, UInt8, 4) == b"RIFF"
+    @test testread(io, UInt8, 4) == b"RIFF"
     @test WAV.read_le(io, UInt32) == file_size - 8
-    @test read(io, UInt8, 4) == b"WAVE"
+    @test testread(io, UInt8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
@@ -521,7 +527,7 @@ let
     wa = WAV.WAVArray(8000, @compat sin.(1:256 * 8000.0 / 1024));
     myio = IOBuffer()
     display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
-    @test @compat ismatch(r"audio controls", String(myio))
+    @test @compat ismatch(r"audio controls", String(take!(copy(myio))))
 end
 
 ### playback

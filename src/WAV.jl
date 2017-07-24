@@ -122,7 +122,9 @@ end
 
 function read_header(io::IO)
     # check if the given file has a valid RIFF header
-    riff = read(io, UInt8, 4)
+    # v0.7 deprecation
+    riff = Array{UInt8}(4)
+    read!(io, riff)
     if riff !=  b"RIFF"
         error("Invalid WAV file: The RIFF header is invalid")
     end
@@ -130,7 +132,9 @@ function read_header(io::IO)
     chunk_size = read_le(io, UInt32)
 
     # check if this is a WAV file
-    format = read(io, UInt8, 4)
+    # v0.7 deprecation
+    format = Array{UInt8}(4)
+    read!(io, format)
     if format != b"WAVE"
         error("Invalid WAV file: the format is not WAVE")
     end
@@ -162,7 +166,9 @@ function read_format(io::IO, chunk_size::UInt32)
     if chunk_size > 0
         const extra_bytes_length = read_le(io, UInt16)
         if extra_bytes_length == 22
-            ext = read(io, UInt8, extra_bytes_length)
+            # v0.7 deprecation
+            ext = Array{UInt8}(extra_bytes_length)
+            read!(io, ext)
         end
     end
     return WAVFormat(compression_code,
@@ -228,7 +234,9 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
-            raw_sample = read(io, UInt8, nbytes)
+            # v0.7 deprecation
+            raw_sample = Array{UInt8}(nbytes)
+            read!(io, raw_sample)
             my_sample = @compat UInt64(0)
             for k = 1:nbytes
                 my_sample |= convert(UInt64, raw_sample[k]) << bitshift[k]
@@ -596,7 +604,9 @@ function wavread(io::IO; subrange=Void, format="double")
     const subchunk_header_size = 4 + sizeof(UInt32)
     while chunk_size >= subchunk_header_size
         # Read subchunk ID and size
-        subchunk_id = read(io, UInt8, 4)
+        # v0.7 deprecation
+        subchunk_id = Array{UInt8}(4)
+        read!(io, subchunk_id)
         subchunk_size = read_le(io, UInt32)
         if subchunk_size > chunk_size
             chunk_size = 0
@@ -615,7 +625,9 @@ function wavread(io::IO; subrange=Void, format="double")
             end
             samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
-            opt[@compat Symbol(subchunk_id)] = read(io, UInt8, subchunk_size)
+            # v0.7 deprecation
+            opt[@compat Symbol(subchunk_id)] = Array{UInt8}(subchunk_size)
+            read!(io, opt[@compat Symbol(subchunk_id)])
         end
     end
     return samples, sample_rate, nbits, opt
@@ -720,7 +732,9 @@ end
 function wavappend(samples::AbstractArray, io::IO)
     seekstart(io)
     chunk_size = read_header(io)
-    subchunk_id = read(io, UInt8, 4)
+    # v0.7 deprecation
+    subchunk_id = Array{UInt8}(4)
+    read!(io, subchunk_id)
     subchunk_size = read_le(io, UInt32)
     if subchunk_id != b"fmt "
         error("First chunk is not the format")
