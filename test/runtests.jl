@@ -8,11 +8,11 @@ using Compat.String
 # These float array comparison functions are from dists.jl
 function absdiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
     @assert all(size(current) == size(target))
-    maximum(@compat abs.(current - target))
+    maximum(abs.(current - target))
 end
 
 function reldiff(current::T, target::T) where T <: Real
-    @compat abs.((current - target)/(bool(target) ? target : 1))
+    abs.((current - target)/(bool(target) ? target : 1))
 end
 
 function reldiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
@@ -23,12 +23,12 @@ end
 ## example from README, modified to use an IO buffer
 let
     x = [0:7999;]
-    y = @compat sin.(2 * pi * x / 8000)
+    y = sin.(2 * pi * x / 8000)
     io = IOBuffer()
     WAV.wavwrite(y, io, Fs=8000)
     seek(io, 0)
     y, Fs = WAV.wavread(io)
-    y = @compat cos.(2 * pi * x / 8000)
+    y = cos.(2 * pi * x / 8000)
     WAV.wavappend(y, io)
     seek(io, 0)
     y, Fs = WAV.wavread(io)
@@ -36,10 +36,10 @@ end
 
 let
     x = [0:7999;]
-    y = @compat sin.(2 * pi * x / 8000)
+    y = sin.(2 * pi * x / 8000)
     WAV.wavwrite(y, "example.wav", Fs=8000)
     y, Fs = WAV.wavread("example.wav")
-    y = @compat cos.(2 * pi * x / 8000)
+    y = cos.(2 * pi * x / 8000)
     WAV.wavappend(y, "example.wav")
     y, Fs = WAV.wavread("example.wav")
     @test length(y) == (2 * length(x))
@@ -83,7 +83,7 @@ let
                         nbits,
                         WAV.WAVFormatExtension())
 
-    WAV.write_header(io, @compat UInt32(data_length + 37)) # 37 instead of 36 is the broken part
+    WAV.write_header(io, UInt32(data_length + 37)) # 37 instead of 36 is the broken part
     WAV.write_format(io, fmt)
 
     # write the data subchunk header
@@ -504,7 +504,7 @@ let
     fs = 8000.0
     in_data = rand(1024, 2)
     io = IOBuffer()
-    in_chunks = @compat Dict(:test=>[0x1, 0x2, 0x3])
+    in_chunks = Dict(:test=>[0x1, 0x2, 0x3])
     WAV.wavwrite(in_data, io, Fs=fs, chunks=in_chunks)
 
     seek(io, 0)
@@ -524,10 +524,10 @@ end
 
 let
     io = IOBuffer()
-    wa = WAV.WAVArray(8000, @compat sin.(1:256 * 8000.0 / 1024));
+    wa = WAV.WAVArray(8000, sin.(1:256 * 8000.0 / 1024));
     myio = IOBuffer()
     display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
-    @test @compat ismatch(r"audio controls", String(take!(copy(myio))))
+    @test ismatch(r"audio controls", String(take!(copy(myio))))
 end
 
 ### playback
@@ -535,7 +535,7 @@ end
 let
     fs = 44100.0
     t = 1:44100;
-    in_data = @compat sin.(5.0 * t / fs) * 1e-6;
+    in_data = sin.(5.0 * t / fs) * 1e-6;
     #WAV.wavplay(in_data, fs);
     #WAV.wavplay([in_data in_data], fs);
 end

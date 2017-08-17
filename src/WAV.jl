@@ -144,8 +144,8 @@ function write_header(io::IO, data_length::UInt32)
     write_le(io, data_length) # chunk_size
     write(io, b"WAVE")
 end
-write_standard_header(io, data_length) = write_header(io, @compat UInt32(data_length + 36))
-write_extended_header(io, data_length) = write_header(io, @compat UInt32(data_length + 60))
+write_standard_header(io, data_length) = write_header(io, UInt32(data_length + 36))
+write_extended_header(io, data_length) = write_header(io, UInt32(data_length + 60))
 
 function read_format(io::IO, chunk_size::UInt32)
     # can I read in all of the fields at once?
@@ -224,16 +224,16 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     sample_type = eltype(samples)
     nbytes = ceil(Integer, nbits / 8)
     bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
-    mask = @compat UInt64(0x1) << (nbits - 1)
+    mask = UInt64(0x1) << (nbits - 1)
     if nbits <= 8
-        mask = @compat UInt64(0)
+        mask = UInt64(0)
     end
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
             raw_sample = Array{UInt8}(nbytes)
             read!(io, raw_sample)
-            my_sample = @compat UInt64(0)
+            my_sample = UInt64(0)
             for k = 1:nbytes
                 my_sample |= convert(UInt64, raw_sample[k]) << bitshift[k]
             end
@@ -426,7 +426,7 @@ function compress_sample_mulaw(sample)
     sample = sample + cBias
     sampleExponent = MuLawCompressTable[(sample >>> 7) + 1]
     mantissa = (sample >> (sampleExponent+3)) & 0x0F
-    @compat UInt8((~ (sampleSign | (sampleExponent << 4) | mantissa)) & 0xff)
+    UInt8((~ (sampleSign | (sampleExponent << 4) | mantissa)) & 0xff)
 end
 
 function compress_sample_alaw(sample)
@@ -468,7 +468,7 @@ function compress_sample_alaw(sample)
         compressedByte = (sample >>> 4) & 0xff
     end
     compressedByte = xor(xor(sampleSign, 0x55), compressedByte)
-    @compat UInt8(compressedByte & 0xff)
+    UInt8(compressedByte & 0xff)
 end
 
 
@@ -481,7 +481,7 @@ function write_companded_samples(io::IO, samples::AbstractArray{T}, compander::F
 end
 
 function write_companded_samples(io::IO, samples::AbstractArray{T}, compander::Function) where T <: AbstractFloat
-    samples = convert(Array{Int16}, @compat round.(samples * typemax(Int16)))
+    samples = convert(Array{Int16}, round.(samples * typemax(Int16)))
     write_companded_samples(io, samples, compander)
 end
 
@@ -543,10 +543,10 @@ function write_pcm_samples(io::IO, fmt::WAVFormat, samples::AbstractArray{T}) wh
     # Scale the floating point values to the PCM range
     if nbits > 8
         # two's complement
-        samples = convert(Array{pcm_container_type(nbits)}, @compat round.(samples * (2.0^(nbits - 1) - 1)))
+        samples = convert(Array{pcm_container_type(nbits)}, round.(samples * (2.0^(nbits - 1) - 1)))
     else
         # offset binary
-        samples = convert(Array{UInt8}, @compat round.((samples .+ 1.0) / 2.0 * (2.0^nbits - 1)))
+        samples = convert(Array{UInt8}, round.((samples .+ 1.0) / 2.0 * (2.0^nbits - 1)))
     end
     return write_pcm_samples(io, fmt, samples)
 end
@@ -587,7 +587,7 @@ function wavread(io::IO; subrange=Void, format="double")
     chunk_size = read_header(io)
     samples = Array{Float64, 1}()
     nbits = 0
-    sample_rate = @compat Float32(0.0)
+    sample_rate = Float32(0.0)
     opt = Dict{Symbol, Any}()
 
     # Note: This assumes that the format chunk is written in the file before the data chunk. The
@@ -611,7 +611,7 @@ function wavread(io::IO; subrange=Void, format="double")
         # check the subchunk ID
         if subchunk_id == b"fmt "
             fmt = read_format(io, subchunk_size)
-            sample_rate = @compat Float32(fmt.sample_rate)
+            sample_rate = Float32(fmt.sample_rate)
             nbits = bits_per_sample(fmt)
             opt[:fmt] = fmt
         elseif subchunk_id == b"data"
@@ -620,8 +620,8 @@ function wavread(io::IO; subrange=Void, format="double")
             end
             samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
-            opt[@compat Symbol(subchunk_id)] = Array{UInt8}(subchunk_size)
-            read!(io, opt[@compat Symbol(subchunk_id)])
+            opt[Symbol(subchunk_id)] = Array{UInt8}(subchunk_size)
+            read!(io, opt[Symbol(subchunk_id)])
         end
     end
     return samples, sample_rate, nbits, opt
@@ -704,7 +704,7 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
 
     for eachchunk in chunks
         write(io, eachchunk[1])
-        write_le(io, @compat UInt32(length(eachchunk[2])))
+        write_le(io, UInt32(length(eachchunk[2])))
         for eachbyte in eachchunk[2]
             write(io, eachbyte)
         end
