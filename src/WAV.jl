@@ -1,5 +1,5 @@
 # -*- mode: julia; -*-
-VERSION >= v"0.4.0-dev+6521" && Base.__precompile__(true)
+Base.__precompile__(true)
 module WAV
 export wavread, wavwrite, wavappend, wavplay
 export WAVArray, WAVFormatExtension, WAVFormat
@@ -122,7 +122,6 @@ end
 
 function read_header(io::IO)
     # check if the given file has a valid RIFF header
-    # v0.7 deprecation
     riff = Array{UInt8}(4)
     read!(io, riff)
     if riff !=  b"RIFF"
@@ -132,7 +131,6 @@ function read_header(io::IO)
     chunk_size = read_le(io, UInt32)
 
     # check if this is a WAV file
-    # v0.7 deprecation
     format = Array{UInt8}(4)
     read!(io, format)
     if format != b"WAVE"
@@ -155,18 +153,17 @@ function read_format(io::IO, chunk_size::UInt32)
     if chunk_size < 16
         error("The WAVE Format chunk must be at least 16 bytes")
     end
-    const compression_code = read_le(io, UInt16)
-    const nchannels = read_le(io, UInt16)
-    const sample_rate = read_le(io, UInt32)
-    const bytes_per_second = read_le(io, UInt32)
-    const block_align = read_le(io, UInt16)
-    const nbits = read_le(io, UInt16)
+    compression_code = read_le(io, UInt16)
+    nchannels = read_le(io, UInt16)
+    sample_rate = read_le(io, UInt32)
+    bytes_per_second = read_le(io, UInt32)
+    block_align = read_le(io, UInt16)
+    nbits = read_le(io, UInt16)
     ext = Array{UInt8, 1}(0)
     chunk_size -= 16
     if chunk_size > 0
-        const extra_bytes_length = read_le(io, UInt16)
+        extra_bytes_length = read_le(io, UInt16)
         if extra_bytes_length == 22
-            # v0.7 deprecation
             ext = Array{UInt8}(extra_bytes_length)
             read!(io, ext)
         end
@@ -219,14 +216,14 @@ end
 ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
 function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
-    const nbits = bits_per_sample(fmt)
+    nbits = bits_per_sample(fmt)
     if isempty(subrange)
         return Array{pcm_container_type(nbits), 2}(0, fmt.nchannels)
     end
     samples = Array{pcm_container_type(nbits), 2}(length(subrange), fmt.nchannels)
     sample_type = eltype(samples)
-    const nbytes = ceil(Integer, nbits / 8)
-    const bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
+    nbytes = ceil(Integer, nbits / 8)
+    bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
     mask = @compat UInt64(0x1) << (nbits - 1)
     if nbits <= 8
         mask = @compat UInt64(0)
@@ -234,7 +231,6 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
-            # v0.7 deprecation
             raw_sample = Array{UInt8}(nbytes)
             read!(io, raw_sample)
             my_sample = @compat UInt64(0)
@@ -254,9 +250,9 @@ function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, floatType)
     if isempty(subrange)
         return Array{floatType, 2}(0, fmt.nchannels)
     end
-    const nblocks = length(subrange)
+    nblocks = length(subrange)
     samples = Array{floatType, 2}(nblocks, fmt.nchannels)
-    const nbits = bits_per_sample(fmt)
+    nbits = bits_per_sample(fmt)
     skip(io, convert(UInt, (first(subrange) - 1) * (nbits / 8) * fmt.nchannels))
     for i = 1:nblocks
         for j = 1:fmt.nchannels
@@ -268,7 +264,7 @@ end
 
 # take the loop variable type out of the loop
 function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange)
-    const floatType = ieee_float_container_type(bits_per_sample(fmt))
+    floatType = ieee_float_container_type(bits_per_sample(fmt))
     read_ieee_float_samples(io, fmt, subrange, floatType)
 end
 
@@ -276,13 +272,13 @@ function read_companded_samples(io::IO, fmt::WAVFormat, subrange, table)
     if isempty(subrange)
         return Array{eltype(table), 2}(0, fmt.nchannels)
     end
-    const nblocks = length(subrange)
+    nblocks = length(subrange)
     samples = Array{eltype(table), 2}(nblocks, fmt.nchannels)
     skip(io, convert(UInt, (first(subrange) - 1) * fmt.nchannels))
     for i = 1:nblocks
         for j = 1:fmt.nchannels
             # add one to value from blocks because A-law stores values from 0 to 255.
-            const compressedByte::UInt8 = read(io, UInt8)
+            compressedByte::UInt8 = read(io, UInt8)
             # Julia indexing is 1-based; I need a value from 1 to 256
             samples[i, j] = table[compressedByte + 1]
         end
@@ -316,7 +312,7 @@ function read_mulaw_samples(io::IO, fmt::WAVFormat, subrange)
     # −4063 to −2016 in 16 intervals of 128  |  0x10 + interval number
     # −8159 to −4064 in 16 intervals of 256  |  0x00 + interval number
     # ---------------------------------------+--------------------------------
-    const MuLawDecompressTable =
+    MuLawDecompressTable =
     [
     -32124,-31100,-30076,-29052,-28028,-27004,-25980,-24956,
     -23932,-22908,-21884,-20860,-19836,-18812,-17788,-16764,
@@ -357,7 +353,7 @@ end
 
 function read_alaw_samples(io::IO, fmt::WAVFormat, subrange)
     # Quantized A-law algorithm -- Use a look up table to convert
-    const ALawDecompressTable =
+    ALawDecompressTable =
     [
     -5504, -5248, -6016, -5760, -4480, -4224, -4992, -4736,
     -7552, -7296, -8064, -7808, -6528, -6272, -7040, -6784,
@@ -397,7 +393,7 @@ function read_alaw_samples(io::IO, fmt::WAVFormat, subrange)
 end
 
 function compress_sample_mulaw(sample)
-    const MuLawCompressTable =
+    MuLawCompressTable =
     [
     0,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,
     4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
@@ -417,10 +413,10 @@ function compress_sample_mulaw(sample)
     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
      ]
     @assert length(MuLawCompressTable) == 256
-    const cBias = 0x84
-    const cClip = 32635
+    cBias = 0x84
+    cClip = 32635
 
-    const sampleSign = (sample >>> 8) & 0x80
+    sampleSign = (sample >>> 8) & 0x80
     if sampleSign != 0
         sample = -sample
     end
@@ -428,13 +424,13 @@ function compress_sample_mulaw(sample)
         sample = cClip
     end
     sample = sample + cBias
-    const sampleExponent = MuLawCompressTable[(sample >>> 7) + 1]
-    const mantissa = (sample >> (sampleExponent+3)) & 0x0F
+    sampleExponent = MuLawCompressTable[(sample >>> 7) + 1]
+    mantissa = (sample >> (sampleExponent+3)) & 0x0F
     @compat UInt8((~ (sampleSign | (sampleExponent << 4) | mantissa)) & 0xff)
 end
 
 function compress_sample_alaw(sample)
-    const ALawCompressTable =
+    ALawCompressTable =
     [
     1,1,2,2,3,3,3,3,
     4,4,4,4,4,4,4,4,
@@ -454,9 +450,9 @@ function compress_sample_alaw(sample)
     7,7,7,7,7,7,7,7
      ]
     @assert length(ALawCompressTable) == 128
-    const cBias = 0x84
-    const cClip = 32635
-    const sampleSign = ((~sample >>> 8) & 0x80)
+    cBias = 0x84
+    cClip = 32635
+    sampleSign = ((~sample >>> 8) & 0x80)
     if sampleSign == 0
         sample = -sample
     end
@@ -465,8 +461,8 @@ function compress_sample_alaw(sample)
     end
     compressedByte = 0
     if sample >= 256
-        const sampleExponent = ALawCompressTable[((sample >>> 8) & 0x7f) + 1]
-        const mantissa = (sample >>> (sampleExponent + 3) ) & 0x0f
+        sampleExponent = ALawCompressTable[((sample >>> 8) & 0x7f) + 1]
+        mantissa = (sample >>> (sampleExponent + 3) ) & 0x0f
         compressedByte = ((sampleExponent << 4) | mantissa) & 0xff
     else
         compressedByte = (sample >>> 4) & 0xff
@@ -476,7 +472,7 @@ function compress_sample_alaw(sample)
 end
 
 
-function write_companded_samples{T<:Integer}(io::IO, samples::AbstractArray{T}, compander::Function)
+function write_companded_samples(io::IO, samples::AbstractArray{T}, compander::Function) where T <: Integer
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
             write_le(io, compander(samples[i, j]))
@@ -484,7 +480,7 @@ function write_companded_samples{T<:Integer}(io::IO, samples::AbstractArray{T}, 
     end
 end
 
-function write_companded_samples{T<:AbstractFloat}(io::IO, samples::AbstractArray{T}, compander::Function)
+function write_companded_samples(io::IO, samples::AbstractArray{T}, compander::Function) where T <: AbstractFloat
     samples = convert(Array{Int16}, @compat round.(samples * typemax(Int16)))
     write_companded_samples(io, samples, compander)
 end
@@ -495,7 +491,7 @@ end
 convert_pcm_to_double(samples::AbstractArray{UInt8}, nbits::Integer) = convert(Array{Float64}, samples) ./ (2.0^nbits - 1) .* 2.0 .- 1.0
 convert_pcm_to_double(::AbstractArray{Int8}, ::Integer) = error("WAV files use offset binary for less than 9 bits")
 # support every bit width from 9 to 64 bits
-convert_pcm_to_double{T<:Signed}(samples::AbstractArray{T}, nbits::Integer) = convert(Array{Float64}, samples) / (2.0^(nbits - 1) - 1)
+convert_pcm_to_double(samples::AbstractArray{T}, nbits::Integer) where T <: Signed = convert(Array{Float64}, samples) / (2.0^(nbits - 1) - 1)
 
 function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
     # "format" is the format of values, while "fmt" is the WAV file level format
@@ -525,10 +521,10 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
     samples
 end
 
-function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::AbstractArray{T})
-    const nbits = bits_per_sample(fmt)
+function write_pcm_samples(io::IO, fmt::WAVFormat, samples::AbstractArray{T}) where T <: Integer
+    nbits = bits_per_sample(fmt)
     # number of bytes per sample
-    const nbytes = ceil(Integer, nbits / 8)
+    nbytes = ceil(Integer, nbits / 8)
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
             my_sample = samples[i, j]
@@ -542,8 +538,8 @@ function write_pcm_samples{T<:Integer}(io::IO, fmt::WAVFormat, samples::Abstract
     end
 end
 
-function write_pcm_samples{T<:AbstractFloat}(io::IO, fmt::WAVFormat, samples::AbstractArray{T})
-    const nbits = bits_per_sample(fmt)
+function write_pcm_samples(io::IO, fmt::WAVFormat, samples::AbstractArray{T}) where T <: AbstractFloat
+    nbits = bits_per_sample(fmt)
     # Scale the floating point values to the PCM range
     if nbits > 8
         # two's complement
@@ -566,7 +562,7 @@ end
 
 # take the loop variable type out of the loop
 function write_ieee_float_samples(io::IO, fmt::WAVFormat, samples)
-    const floatType = ieee_float_container_type(bits_per_sample(fmt))
+    floatType = ieee_float_container_type(bits_per_sample(fmt))
     write_ieee_float_samples(io, convert(Array{floatType}, samples))
 end
 
@@ -601,10 +597,9 @@ function wavread(io::IO; subrange=Void, format="double")
     # of all the sub-chunks
     chunk_size -= 4
     # GitHub Issue #18: Check if there is enough data to read another chunk
-    const subchunk_header_size = 4 + sizeof(UInt32)
+    subchunk_header_size = 4 + sizeof(UInt32)
     while chunk_size >= subchunk_header_size
         # Read subchunk ID and size
-        # v0.7 deprecation
         subchunk_id = Array{UInt8}(4)
         read!(io, subchunk_id)
         subchunk_size = read_le(io, UInt32)
@@ -625,7 +620,6 @@ function wavread(io::IO; subrange=Void, format="double")
             end
             samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
-            # v0.7 deprecation
             opt[@compat Symbol(subchunk_id)] = Array{UInt8}(subchunk_size)
             read!(io, opt[@compat Symbol(subchunk_id)])
         end
@@ -644,8 +638,8 @@ wavread(filename::AbstractString, fmt::AbstractString) = wavread(filename, forma
 wavread(filename::AbstractString, n) = wavread(filename, subrange=n)
 wavread(filename::AbstractString, n, fmt) = wavread(filename, subrange=n, format=fmt)
 
-get_default_compression{T<:Integer}(::AbstractArray{T}) = WAVE_FORMAT_PCM
-get_default_compression{T<:AbstractFloat}(::AbstractArray{T}) = WAVE_FORMAT_IEEE_FLOAT
+get_default_compression(::AbstractArray{T}) where T <: Integer = WAVE_FORMAT_PCM
+get_default_compression(::AbstractArray{T}) where T<:AbstractFloat = WAVE_FORMAT_IEEE_FLOAT
 get_default_pcm_precision(::AbstractArray{UInt8}) = 8
 get_default_pcm_precision(::AbstractArray{Int16}) = 16
 get_default_pcm_precision(::Any) = 24
@@ -670,18 +664,18 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
         nbits = get_default_precision(samples, compression)
     end
     compression_code = compression
-    const nchannels = size(samples, 2)
-    const sample_rate = Fs
-    const my_nbits = ceil(Integer, nbits / 8) * 8
-    const block_align = my_nbits / 8 * nchannels
-    const bps = sample_rate * block_align
-    const data_length::UInt32 = size(samples, 1) * block_align
+    nchannels = size(samples, 2)
+    sample_rate = Fs
+    my_nbits = ceil(Integer, nbits / 8) * 8
+    block_align = my_nbits / 8 * nchannels
+    bps = sample_rate * block_align
+    data_length::UInt32 = size(samples, 1) * block_align
     ext = WAVFormatExtension()
 
     if nchannels > 2 || my_nbits > 16 || my_nbits != nbits
         compression_code = WAVE_FORMAT_EXTENSIBLE
-        const valid_bits_per_sample = nbits
-        const channel_mask = 0
+        valid_bits_per_sample = nbits
+        channel_mask = 0
         sub_format = Array{UInt8, 1}(0)
         if compression == WAVE_FORMAT_PCM
             sub_format = KSDATAFORMAT_SUBTYPE_PCM
@@ -732,7 +726,6 @@ end
 function wavappend(samples::AbstractArray, io::IO)
     seekstart(io)
     chunk_size = read_header(io)
-    # v0.7 deprecation
     subchunk_id = Array{UInt8}(4)
     read!(io, subchunk_id)
     subchunk_size = read_le(io, UInt32)
@@ -745,7 +738,7 @@ function wavappend(samples::AbstractArray, io::IO)
         error("Number of channels do not match")
     end
 
-    const data_length = size(samples, 1) * fmt.block_align
+    data_length = size(samples, 1) * fmt.block_align
 
     seek(io,4)
     write_le(io, convert(UInt32, chunk_size + data_length))
@@ -769,12 +762,12 @@ wavwrite(y::AbstractArray, f::Real, filename::AbstractString) = wavwrite(y, file
 wavwrite(y::AbstractArray, f::Real, n::Real, filename::AbstractString) = wavwrite(y, filename, Fs=f, nbits=n)
 
 # support for writing native arrays...
-wavwrite{T<:Integer}(y::AbstractArray{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8)
-wavwrite{T<:Integer}(y::AbstractArray{T}, filename::AbstractString) = wavwrite(y, filename, nbits=sizeof(T)*8)
+wavwrite(y::AbstractArray{T}, io::IO) where T <: Integer = wavwrite(y, io, nbits=sizeof(T)*8)
+wavwrite(y::AbstractArray{T}, filename::AbstractString) where T <: Integer = wavwrite(y, filename, nbits=sizeof(T)*8)
 wavwrite(y::AbstractArray{Int32}, io::IO) = wavwrite(y, io, nbits=24)
 wavwrite(y::AbstractArray{Int32}, filename::AbstractString) = wavwrite(y, filename, nbits=24)
-wavwrite{T<:AbstractFloat}(y::AbstractArray{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
-wavwrite{T<:AbstractFloat}(y::AbstractArray{T}, filename::AbstractString) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+wavwrite(y::AbstractArray{T}, io::IO) where T <: AbstractFloat = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+wavwrite(y::AbstractArray{T}, filename::AbstractString) where T <: AbstractFloat = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
 
 # FileIO integration support
 load(s::Stream{format"WAV"}; kwargs...) = wavread(s.io; kwargs...)

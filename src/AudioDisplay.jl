@@ -12,7 +12,6 @@ wavwrite(x::WAVArray, io::IO) = wavwrite(x.data, io; Fs=x.Fs)
 @compat function show(io::IO, ::MIME"text/html", x::WAVArray)
     buf = IOBuffer()
     wavwrite(x, buf)
-    # v0.7 deprecation
     data = base64encode(@compat String(take!(copy(buf))))
     markup = """<audio controls="controls" {autoplay}>
                 <source src="data:audio/wav;base64,$data" type="audio/wav" />

@@ -79,7 +79,7 @@ const PA_CHANNEL_MAP_AIFF = 0
 const PA_CHANNEL_MAP_DEFAULT = PA_CHANNEL_MAP_AIFF
 
 function wavplay(data, fs)
-    const nChannels = size(data,2)
+    nChannels = size(data,2)
     ss = pa_sample_spec(PA_SAMPLE_FLOAT32LE, fs, nChannels)
 
     # Manually layout the samples.
