@@ -27,13 +27,13 @@ const kAudioFormatFlagIsNonMixable          = (1 << 6)
 const kAudioFormatFlagsAreAllClear          = (1 << 31)
 
 # Apple Core Audio Type
-immutable AudioStreamPacketDescription
+struct AudioStreamPacketDescription
     mStartOffset::Int64
     mVariableFramesInPacket::UInt32
     mDataByteSize::UInt32
 end
 
-immutable SMPETime
+struct SMPETime
     mSubframes::Int16
     mSubframeDivisor::Int16
     mCounter::UInt32
@@ -47,7 +47,7 @@ immutable SMPETime
     SMPETime() = new(0, 0, 0, 0, 0, 0, 0, 0, 0)
 end
 
-immutable AudioTimeStamp
+struct AudioTimeStamp
     mSampleTime::Float64
     mHostTime::UInt64
     mRateScalar::Float64
@@ -60,7 +60,7 @@ immutable AudioTimeStamp
 end
 
 # Apple Core Audio Type
-type AudioQueueBuffer
+mutable struct AudioQueueBuffer
     mAudioDataBytesCapacity::UInt32
     mAudioData::Ptr{Void}
     mAudioDataByteSize::UInt32
@@ -85,7 +85,7 @@ getCoreFoundationRunLoopDefaultMode() =
     unsafe_load(cglobal((:kCFRunLoopDefaultMode, CoreFoundation), CFStringRef))
 
 # Apple Core Audio Type
-immutable AudioStreamBasicDescription
+struct AudioStreamBasicDescription
     mSampleRate::Float64
     mFormatID::UInt32
     mFormatFlags::UInt32
@@ -109,7 +109,7 @@ immutable AudioStreamBasicDescription
                                                       0)
 end
 
-type AudioQueueData
+mutable struct AudioQueueData
     samples::Array
     aq::AudioQueueRef
     offset::Int
@@ -122,9 +122,9 @@ type AudioQueueData
 end
 
 function AudioQueueFreeBuffer(aq::AudioQueueRef, buf::AudioQueueBufferRef)
-    const result = ccall((:AudioQueueFreeBuffer, AudioToolbox),
-                         OSStatus,
-                         (AudioQueueRef, AudioQueueBufferRef), aq, buf)
+    result = ccall((:AudioQueueFreeBuffer, AudioToolbox),
+                   OSStatus,
+                   (AudioQueueRef, AudioQueueBufferRef), aq, buf)
     if result != 0
         error("AudioQueueFreeBuffer failed with $result")
     end
@@ -147,8 +147,8 @@ end
 #     audio queue buffer structure, AudioQueueBuffer, is initially set to 0.
 # @result     An OSStatus result code.
 function AudioQueueAllocateBuffer(aq)
-    const newBuffer = Array{AudioQueueBufferRef, 1}(1)
-    const result =
+    newBuffer = Array{AudioQueueBufferRef, 1}(1)
+    result =
         ccall((:AudioQueueAllocateBuffer, AudioToolbox), OSStatus,
               (AudioQueueRef, UInt32, Ptr{AudioQueueBufferRef}),
               aq, 4096, newBuffer)
@@ -163,10 +163,10 @@ function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     buffer = unsafe_load(bufPtr)
     @assert buffer.mAudioDataBytesCapacity / sizeof(eltype(data)) >= length(data)
 
-    const nChannels = size(data, 2)
-    const coreAudioData = convert(Ptr{eltype(data)}, buffer.mAudioData)
+    nChannels = size(data, 2)
+    coreAudioData = convert(Ptr{eltype(data)}, buffer.mAudioData)
     for i = 1:size(data, 1) # for each sample
-        const coreAudioIndex = (nChannels * (i - 1))
+        coreAudioIndex = (nChannels * (i - 1))
         for j = 1:nChannels
             unsafe_store!(coreAudioData, data[i, j], coreAudioIndex + j)
         end
@@ -174,10 +174,10 @@ function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     buffer.mAudioDataByteSize = sizeof(data)
 
     unsafe_store!(bufPtr, buffer)
-    const result = ccall((:AudioQueueEnqueueBuffer, AudioToolbox),
-                         OSStatus,
-                         (AudioQueueRef, AudioQueueBufferRef, UInt32, Ptr{Void}),
-                         aq, bufPtr, 0, C_NULL)
+    result = ccall((:AudioQueueEnqueueBuffer, AudioToolbox),
+                   OSStatus,
+                   (AudioQueueRef, AudioQueueBufferRef, UInt32, Ptr{Void}),
+                   aq, bufPtr, 0, C_NULL)
     if result != 0
         error("AudioQueueEnqueueBuffer failed with $result")
     end
@@ -208,7 +208,7 @@ end
 function allocateAllBuffers(userData)
     buffers = AudioQueueBufferRef[]
     for i = 1:kNumberBuffers
-        const buf = AudioQueueAllocateBuffer(userData.aq)
+        buf = AudioQueueAllocateBuffer(userData.aq)
         push!(buffers, buf)
     end
     return buffers
@@ -260,14 +260,14 @@ end
 #     object.
 # @result     An OSStatus result code.
 function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::AudioQueueData)
-    const runLoop = CFRunLoopGetCurrent()
+    runLoop = CFRunLoopGetCurrent()
     userData.runLoop = runLoop
-    const runLoopMode = getCoreFoundationRunLoopDefaultMode()
+    runLoopMode = getCoreFoundationRunLoopDefaultMode()
 
-    const newAudioQueue = Array{AudioQueueRef, 1}(1)
-    const cCallbackProc = cfunction(playCallback, Void,
-                                    (Ptr{AudioQueueData}, AudioQueueRef, AudioQueueBufferRef))
-    const result =
+    newAudioQueue = Array{AudioQueueRef, 1}(1)
+    cCallbackProc = cfunction(playCallback, Void,
+                              (Ptr{AudioQueueData}, AudioQueueRef, AudioQueueBufferRef))
+    result =
         ccall((:AudioQueueNewOutput, AudioToolbox), OSStatus,
               (Ptr{AudioStreamBasicDescription}, Ptr{Void}, Ptr{AudioQueueData}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
               &format, cCallbackProc, &userData, runLoop, runLoopMode, 0, newAudioQueue)
@@ -278,9 +278,9 @@ function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::Audi
 end
 
 function AudioQueueDispose(aq::AudioQueueRef, immediate::Bool)
-    const result = ccall((:AudioQueueDispose, AudioToolbox),
-                         OSStatus,
-                         (AudioQueueRef, Bool), aq, immediate)
+    result = ccall((:AudioQueueDispose, AudioToolbox),
+                   OSStatus,
+                   (AudioQueueRef, Bool), aq, immediate)
     if result != 0
         error("AudioQueueDispose failed with $result")
     end
@@ -298,8 +298,8 @@ end
 #     referenced to the sample frame timeline of the associated audio device. May be NULL.
 # @result     An OSStatus result code.
 function AudioQueueStart(aq)
-    const result = ccall((:AudioQueueStart, AudioToolbox), OSStatus,
-                         (AudioQueueRef, Ptr{AudioTimeStamp}), aq, C_NULL)
+    result = ccall((:AudioQueueStart, AudioToolbox), OSStatus,
+                   (AudioQueueRef, Ptr{AudioTimeStamp}), aq, C_NULL)
     if result != 0
         error("AudioQueueStart failed with $result")
     end
@@ -329,8 +329,8 @@ end
 #     AudioQueueStop returns.
 # @result     An OSStatus result code.
 function AudioQueueStop(aq, immediate)
-    const result = ccall((:AudioQueueStop, AudioToolbox), OSStatus,
-                         (AudioQueueRef, Bool), aq, immediate)
+    result = ccall((:AudioQueueStop, AudioToolbox), OSStatus,
+                   (AudioQueueRef, Bool), aq, immediate)
     if result != 0
         error("AudioQueueStop failed with $result")
     end
@@ -348,10 +348,10 @@ end
 
 # LEUI8, LEI16, LEI24, LEI32, LEF32, LEF64, 'ulaw', 'alaw'
 function getFormatForData(data, fs)
-    const elType = eltype(data)
-    const fmtFlags = getFormatFlags(elType)
-    const elSize = sizeof(elType)
-    const nChannels = size(data, 2)
+    elType = eltype(data)
+    fmtFlags = getFormatFlags(elType)
+    elSize = sizeof(elType)
+    nChannels = size(data, 2)
     return AudioStreamBasicDescription(fs,
                                        kAudioFormatLinearPCM,
                                        fmtFlags,

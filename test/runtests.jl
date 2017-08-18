@@ -6,16 +6,16 @@ using Compat
 using Compat.String
 
 # These float array comparison functions are from dists.jl
-function absdiff{T<:Real}(current::AbstractArray{T}, target::AbstractArray{T})
+function absdiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
     @assert all(size(current) == size(target))
     maximum(@compat abs.(current - target))
 end
 
-function reldiff{T<:Real}(current::T, target::T)
+function reldiff(current::T, target::T) where T <: Real
     @compat abs.((current - target)/(bool(target) ? target : 1))
 end
 
-function reldiff{T<:Real}(current::AbstractArray{T}, target::AbstractArray{T})
+function reldiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
     @assert all(size(current) == size(target))
     maximum([reldiff(current[i], target[i]) for i in 1:numel(target)])
 end
@@ -65,23 +65,23 @@ let
     samples = rand(Float32, (10, 1))
     io = IOBuffer()
 
-    const compression = WAV.get_default_compression(samples)
+    compression = WAV.get_default_compression(samples)
     nbits = WAV.get_default_precision(samples, compression)
 
-    const nchannels = size(samples, 2)
-    const sample_rate = 8000
+    nchannels = size(samples, 2)
+    sample_rate = 8000
     nbits = ceil(Integer, nbits / 8) * 8
-    const block_align = nbits / 8 * nchannels
-    const bps = sample_rate * block_align
-    const data_length::UInt32 = size(samples, 1) * block_align
+    block_align = nbits / 8 * nchannels
+    bps = sample_rate * block_align
+    data_length::UInt32 = size(samples, 1) * block_align
 
-    const fmt = WAV.WAVFormat(compression,
-                              nchannels,
-                              sample_rate,
-                              bps,
-                              block_align,
-                              nbits,
-                              WAV.WAVFormatExtension())
+    fmt = WAV.WAVFormat(compression,
+                        nchannels,
+                        sample_rate,
+                        bps,
+                        block_align,
+                        nbits,
+                        WAV.WAVFormatExtension())
 
     WAV.write_header(io, @compat UInt32(data_length + 37)) # 37 instead of 36 is the broken part
     WAV.write_format(io, fmt)
@@ -130,6 +130,12 @@ let
     @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
 end
 
+function testread(io, ::Type{T}, sz) where T <: Real
+    a = Array{T}(sz)
+    read!(io, a)
+    return a
+end
+
 ## Test wavread and wavwrite
 ## Generate some wav files for writing and reading
 for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,24,32,64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:4
@@ -148,9 +154,9 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
 
     ## Check for the common header identifiers
     seek(io, 0)
-    @test read(io, UInt8, 4) == b"RIFF"
+    @test testread(io, UInt8, 4) == b"RIFF"
     @test WAV.read_le(io, UInt32) == file_size - 8
-    @test read(io, UInt8, 4) == b"WAVE"
+    @test testread(io, UInt8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
@@ -346,8 +352,8 @@ end
 
 ### Test A-Law and Mu-Law
 for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:4, fmt=(WAV.WAVE_FORMAT_ALAW, WAV.WAVE_FORMAT_MULAW)
-    const fs = 8000.0
-    const tol = 2.0 / (2.0^6)
+    fs = 8000.0
+    tol = 2.0 / (2.0^6)
     in_data = rand(nsamples, nchans)
     if nsamples > 0
         @test maximum(in_data) <= 1.0
@@ -359,9 +365,9 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
 
     ## Check for the common header identifiers
     seek(io, 0)
-    @test read(io, UInt8, 4) == b"RIFF"
+    @test testread(io, UInt8, 4) == b"RIFF"
     @test WAV.read_le(io, UInt32) == file_size - 8
-    @test read(io, UInt8, 4) == b"WAVE"
+    @test testread(io, UInt8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
@@ -423,8 +429,8 @@ end
 
 ### Test float formatting
 for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nchans = 1:2, fmt=(WAV.WAVE_FORMAT_IEEE_FLOAT)
-    const fs = 8000.0
-    const tol = 1e-6
+    fs = 8000.0
+    tol = 1e-6
     in_data = rand(nsamples, nchans)
     if nsamples > 0
         @test maximum(in_data) <= 1.0
@@ -436,9 +442,9 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
 
     ## Check for the common header identifiers
     seek(io, 0)
-    @test read(io, UInt8, 4) == b"RIFF"
+    @test testread(io, UInt8, 4) == b"RIFF"
     @test WAV.read_le(io, UInt32) == file_size - 8
-    @test read(io, UInt8, 4) == b"WAVE"
+    @test testread(io, UInt8, 4) == b"WAVE"
 
     ## Check that wavread works on the wavwrite produced memory
     seek(io, 0)
@@ -495,7 +501,7 @@ end
 
 ### Read unknown chunks
 let
-    const fs = 8000.0
+    fs = 8000.0
     in_data = rand(1024, 2)
     io = IOBuffer()
     in_chunks = @compat Dict(:test=>[0x1, 0x2, 0x3])
@@ -509,7 +515,7 @@ let
 end
 
 ### WAVArray
-type TestHtmlDisplay <: Display
+struct TestHtmlDisplay <: Display
     io::IOBuffer
 end
 function display(d::TestHtmlDisplay, mime::MIME"text/html", x)
@@ -521,13 +527,13 @@ let
     wa = WAV.WAVArray(8000, @compat sin.(1:256 * 8000.0 / 1024));
     myio = IOBuffer()
     display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
-    @test @compat ismatch(r"audio controls", String(myio))
+    @test @compat ismatch(r"audio controls", String(take!(copy(myio))))
 end
 
 ### playback
 # The playback tests don't work on travis.
 let
-    const fs = 44100.0
+    fs = 44100.0
     t = 1:44100;
     in_data = @compat sin.(5.0 * t / fs) * 1e-6;
     #WAV.wavplay(in_data, fs);

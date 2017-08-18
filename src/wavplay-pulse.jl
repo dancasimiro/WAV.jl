@@ -18,13 +18,13 @@ const PA_SAMPLE_S24BE     = 10 # Signed 24 Bit PCM packed, big endian. \since 0.
 const PA_SAMPLE_S24_32LE  = 11 # Signed 24 Bit PCM in LSB of 32 Bit words, little endian (PC). \since 0.9.15
 const PA_SAMPLE_S24_32BE  = 12 # Signed 24 Bit PCM in LSB of 32 Bit words, big endian. \since 0.9.15
 
-immutable pa_sample_spec
+struct pa_sample_spec
     format::Int32
     rate::UInt32
     channels::UInt8
 end
 
-immutable pa_channel_map
+struct pa_channel_map
     channels::UInt8
 
     # map data (max 32 channels)
@@ -64,7 +64,7 @@ immutable pa_channel_map
     pa_channel_map() = new(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
 end
 
-immutable pa_buffer_attr
+struct pa_buffer_attr
     maxlength::UInt32
     tlength::UInt32
     prebuf::UInt32
@@ -79,7 +79,7 @@ const PA_CHANNEL_MAP_AIFF = 0
 const PA_CHANNEL_MAP_DEFAULT = PA_CHANNEL_MAP_AIFF
 
 function wavplay(data, fs)
-    const nChannels = size(data,2)
+    nChannels = size(data,2)
     ss = pa_sample_spec(PA_SAMPLE_FLOAT32LE, fs, nChannels)
 
     # Manually layout the samples.
