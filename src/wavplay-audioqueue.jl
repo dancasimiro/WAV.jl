@@ -1,7 +1,6 @@
 # -*- mode: julia; -*-
 module WAVPlay
 import WAV.wavplay
-using Compat
 
 const OSStatus = Int32
 const CFTypeRef = Ptr{Void}
