@@ -45,6 +45,8 @@ struct WAVFormat
     block_align::UInt16
     nbits::UInt16
     ext::WAVFormatExtension
+    WAVFormat() = new(WAVE_FORMAT_PCM, 0, 0, 0, 16, 0, WAVFormatExtension())
+    WAVFormat(cc, nchan, fs, bps, ba, nb, e) = new(cc, nchan, fs, bps, ba, nb, e)
 end
 
 const WAVE_FORMAT_PCM        = 0x0001 # PCM
@@ -597,6 +599,7 @@ function wavread(io::IO; subrange=Void, format="double")
     chunk_size -= 4
     # GitHub Issue #18: Check if there is enough data to read another chunk
     subchunk_header_size = 4 + sizeof(UInt32)
+    fmt = WAVFormat()
     while chunk_size >= subchunk_header_size
         # Read subchunk ID and size
         subchunk_id = Array{UInt8}(4)
