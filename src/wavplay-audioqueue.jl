@@ -269,7 +269,7 @@ function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::Audi
     result =
         ccall((:AudioQueueNewOutput, AudioToolbox), OSStatus,
               (Ptr{AudioStreamBasicDescription}, Ptr{Void}, Ptr{AudioQueueData}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
-              &format, cCallbackProc, &userData, runLoop, runLoopMode, 0, newAudioQueue)
+              Ref(format), cCallbackProc, Ref(userData), runLoop, runLoopMode, 0, newAudioQueue)
     if result != 0
         error("AudioQueueNewOutput failed with $result")
     end
