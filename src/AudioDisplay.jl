@@ -1,5 +1,3 @@
-using Compat
-import Compat.String
 import Base.show
 
 struct WAVArray{T,N}
