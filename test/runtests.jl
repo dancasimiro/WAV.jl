@@ -499,7 +499,7 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
     end
 end
 
-### Read unknown chunks
+### Read unknown chunks, GitHub Issue #50
 let
     fs = 8000.0
     in_data = rand(1024, 2)
@@ -512,6 +512,8 @@ let
 
     @test haskey(ext, :test) == true
     @test ext[:test] == in_chunks[:test]
+    @test length(data) == length(in_data)
+    @test isapprox(data, in_data; atol=1.0e-6)
 end
 
 ### WAVArray
