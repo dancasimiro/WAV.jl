@@ -672,6 +672,7 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
     block_align = my_nbits / 8 * nchannels
     bps = sample_rate * block_align
     data_length::UInt32 = size(samples, 1) * block_align
+    extra_length::UInt32 = 8 * length(chunks) + sum([length(c) for (_, c) in chunks])
     ext = WAVFormatExtension()
 
     if nchannels > 2 || my_nbits > 16 || my_nbits != nbits
@@ -691,9 +692,9 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
             error("Unsupported extension sub format: $compression")
         end
         ext = WAVFormatExtension(valid_bits_per_sample, channel_mask, sub_format)
-        write_extended_header(io, data_length)
+        write_extended_header(io, data_length + extra_length)
     else
-        write_standard_header(io, data_length)
+        write_standard_header(io, data_length + extra_length)
     end
     fmt = WAVFormat(compression_code,
                     nchannels,
