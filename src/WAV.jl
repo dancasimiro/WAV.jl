@@ -589,7 +589,7 @@ function wavread(io::IO; subrange=Void, format="double")
     samples = Array{Float64, 1}()
     nbits = 0
     sample_rate = Float32(0.0)
-    opt = Dict{Symbol, Any}()
+    opt = Tuple{Symbol, Any}[]
 
     # Note: This assumes that the format chunk is written in the file before the data chunk. The
     # specification does not require this assumption, but most real files are written that way.
@@ -615,15 +615,16 @@ function wavread(io::IO; subrange=Void, format="double")
             fmt = read_format(io, subchunk_size)
             sample_rate = Float32(fmt.sample_rate)
             nbits = bits_per_sample(fmt)
-            opt[:fmt] = fmt
+            push!(opt, (:fmt, fmt))
         elseif subchunk_id == b"data"
             if format == "size"
                 return convert(Int, subchunk_size / fmt.block_align), convert(Int, fmt.nchannels)
             end
             samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
-            opt[Symbol(subchunk_id)] = Array{UInt8}(subchunk_size)
-            read!(io, opt[Symbol(subchunk_id)])
+            subchunk_data = Array{UInt8}(subchunk_size)
+            push!(opt, (Symbol(subchunk_id), subchunk_data))
+            read!(io, subchunk_data)
         end
     end
     return samples, sample_rate, nbits, opt
@@ -656,7 +657,7 @@ function get_default_precision(samples, compression)
 end
 
 function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=0,
-                  chunks::Dict{Symbol, Array{UInt8,1}}=Dict{Symbol, Array{UInt8,1}}())
+                  chunks::Vector{Tuple{Symbol, Array{UInt8,1}}}=Tuple{Symbol, Array{UInt8,1}}[])
     if compression == 0
         compression = get_default_compression(samples)
     elseif compression == WAVE_FORMAT_ALAW || compression == WAVE_FORMAT_MULAW
@@ -720,7 +721,7 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
 end
 
 function wavwrite(samples::AbstractArray, filename::AbstractString; Fs=8000, nbits=0, compression=0,
-                  chunks::Dict{Symbol, Array{UInt8,1}}=Dict{Symbol, Array{UInt8,1}}())
+                  chunks::Vector{Tuple{Symbol, Array{UInt8,1}}}=Tuple{Symbol, Array{UInt8,1}}[])
     open(filename, "w") do io
         wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression, chunks=chunks)
     end
