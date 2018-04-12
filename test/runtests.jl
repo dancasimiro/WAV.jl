@@ -56,7 +56,7 @@ let
     @test typeof(y) == Array{Float32, 2}
     @test fs == 8000.0
     @test nbits == 32
-    @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
+    @test WAV.isformat(WAV.getformat(extra), WAV.WAVE_FORMAT_IEEE_FLOAT)
 end
 
 ## malformed subchunk header, GitHub Issue #18
@@ -95,13 +95,14 @@ let
     y, fs, nbits, opt = WAV.wavread(io, format="native")
     @test fs == 8000
     @test nbits == 32
-    @test opt[:fmt].compression_code == compression
-    @test opt[:fmt].nchannels == nchannels
-    @test opt[:fmt].sample_rate == sample_rate
-    @test opt[:fmt].bytes_per_second == bps
-    @test opt[:fmt].block_align == block_align
-    @test WAV.isformat(opt[:fmt], compression)
-    @test WAV.bits_per_sample(opt[:fmt]) == nbits
+    fmt = WAV.getformat(opt)
+    @test fmt.compression_code == compression
+    @test fmt.nchannels == nchannels
+    @test fmt.sample_rate == sample_rate
+    @test fmt.bytes_per_second == bps
+    @test fmt.block_align == block_align
+    @test WAV.isformat(fmt, compression)
+    @test WAV.bits_per_sample(fmt) == nbits
     @test samples == y
 end
 
@@ -114,8 +115,9 @@ let
     @test typeof(y) == Array{Float64, 2}
     @test fs == 8000.0
     @test nbits == 64
-    @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
-    @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_EXTENSIBLE)
+    fmt = WAV.getformat(extra)
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_EXTENSIBLE)
 end
 
 let
@@ -127,7 +129,7 @@ let
     @test typeof(y) == Array{Float32, 2}
     @test fs == 8000.0
     @test nbits == 32
-    @test WAV.isformat(extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
+    @test WAV.isformat(WAV.getformat(extra), WAV.WAVE_FORMAT_IEEE_FLOAT)
 end
 
 function testread(io, ::Type{T}, sz) where T <: Real
@@ -171,7 +173,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
     @test typeof(out_data) == Array{Float64, 2}
     @test out_fs == fs
     @test out_nbits == nbits
-    fmt = out_extra[:fmt]
+    fmt = WAV.getformat(out_extra)
     @test WAV.bits_per_sample(fmt) == nbits
     @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
     @test fmt.nchannels == nchans
@@ -194,7 +196,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @test typeof(out_data) == Array{Float64, 2}
         @test out_fs == fs
         @test out_nbits == nbits
-        fmt = out_extra[:fmt]
+        fmt = WAV.getformat(out_extra)
         @test WAV.bits_per_sample(fmt) == nbits
         @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
         @test fmt.nchannels == nchans
@@ -209,7 +211,7 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @test typeof(out_data) == Array{Float64, 2}
         @test out_fs == fs
         @test out_nbits == nbits
-        fmt = out_extra[:fmt]
+        fmt = WAV.getformat(out_extra)
         @test WAV.bits_per_sample(fmt) == nbits
         @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
         @test fmt.nchannels == nchans
@@ -239,7 +241,7 @@ for nchans = (1,2,4)
     out_data_8, fs, nbits, extra = WAV.wavread(io, format="native")
     @test fs == 8000
     @test nbits == 8
-    fmt = extra[:fmt]
+    fmt = WAV.getformat(extra)
     @test WAV.bits_per_sample(fmt) == nbits
     @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
     @test fmt.nchannels == nchans
@@ -256,7 +258,7 @@ for nchans = (1,2,4)
     out_data_16, fs, nbits, extra = WAV.wavread(io, format="native")
     @test fs == 8000
     @test nbits == 16
-    fmt = extra[:fmt]
+    fmt = WAV.getformat(extra)
     @test WAV.bits_per_sample(fmt) == nbits
     @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
     @test fmt.nchannels == nchans
@@ -273,7 +275,7 @@ for nchans = (1,2,4)
     out_data_24, fs, nbits, extra = WAV.wavread(io, format="native")
     @test fs == 8000
     @test nbits == 24
-    fmt = extra[:fmt]
+    fmt = WAV.getformat(extra)
     @test WAV.bits_per_sample(fmt) == nbits
     @test WAV.isformat(fmt, WAV.WAVE_FORMAT_PCM)
     @test fmt.nchannels == nchans
@@ -290,7 +292,7 @@ for nchans = (1,2,4)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @test fs == 8000
     @test nbits == 32
-    fmt = extra[:fmt]
+    fmt = WAV.getformat(extra)
     @test WAV.bits_per_sample(fmt) == nbits
     @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
     @test fmt.nchannels == nchans
@@ -308,7 +310,7 @@ for nchans = (1,2,4)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @test fs == 8000
     @test nbits == 32
-    fmt = extra[:fmt]
+    fmt = WAV.getformat(extra)
     @test WAV.bits_per_sample(fmt) == nbits
     @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
     @test fmt.nchannels == nchans
@@ -325,7 +327,7 @@ for nchans = (1,2,4)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @test fs == 8000
     @test nbits == 64
-    fmt = extra[:fmt]
+    fmt = WAV.getformat(extra)
     @test WAV.bits_per_sample(fmt) == nbits
     @test fmt.nchannels == nchans
     @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
@@ -343,7 +345,7 @@ for nchans = (1,2,4)
     out_data_single, fs, nbits, extra = WAV.wavread(io, format="native")
     @test fs == 8000
     @test nbits == 64
-    fmt = extra[:fmt]
+    fmt = WAV.getformat(extra)
     @test WAV.bits_per_sample(fmt) == nbits
     @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
     @test fmt.nchannels == nchans
@@ -382,13 +384,14 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
     @test typeof(out_data) == Array{Float64, 2}
     @test out_fs == fs
     @test out_nbits == 8
-    @test WAV.bits_per_sample(out_extra[:fmt]) == 8
-    @test out_extra[:fmt].nchannels == nchans
-    @test WAV.isformat(out_extra[:fmt], fmt)
+    out_fmt = WAV.getformat(out_extra)
+    @test WAV.bits_per_sample(out_fmt) == 8
+    @test out_fmt.nchannels == nchans
+    @test WAV.isformat(out_fmt, fmt)
     if nchans > 2
-        @test WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_EXTENSIBLE)
+        @test WAV.isformat(out_fmt, WAV.WAVE_FORMAT_EXTENSIBLE)
     else
-        @test !WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_EXTENSIBLE)
+        @test !WAV.isformat(out_fmt, WAV.WAVE_FORMAT_EXTENSIBLE)
     end
     if nsamples > 0
         @test absdiff(out_data, in_data) < tol
@@ -406,9 +409,10 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @test typeof(out_data) == Array{Float64, 2}
         @test out_fs == fs
         @test out_nbits == 8
-        @test WAV.bits_per_sample(out_extra[:fmt]) == 8
-        @test out_extra[:fmt].nchannels == nchans
-        @test WAV.isformat(out_extra[:fmt], fmt)
+        out_fmt = WAV.getformat(out_extra)
+        @test WAV.bits_per_sample(out_fmt) == 8
+        @test out_fmt.nchannels == nchans
+        @test WAV.isformat(out_fmt, fmt)
         @test absdiff(out_data, in_data[1:subsamples, :]) < tol
 
         seek(io, 0)
@@ -420,9 +424,10 @@ for nbits = (8, 16), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nch
         @test typeof(out_data) == Array{Float64, 2}
         @test out_fs == fs
         @test out_nbits == 8
-        @test WAV.bits_per_sample(out_extra[:fmt]) == 8
-        @test out_extra[:fmt].nchannels == nchans
-        @test WAV.isformat(out_extra[:fmt], fmt)
+        out_fmt = WAV.getformat(out_extra)
+        @test WAV.bits_per_sample(out_fmt) == 8
+        @test out_fmt.nchannels == nchans
+        @test WAV.isformat(out_fmt, fmt)
         @test absdiff(out_data, in_data[sr, :]) < tol
     end
 end
@@ -459,9 +464,9 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
     @test typeof(out_data) == Array{Float64, 2}
     @test out_fs == fs
     @test out_nbits == nbits
-    @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
-    @test WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
-    @test out_extra[:fmt].nchannels == nchans
+    @test WAV.bits_per_sample(WAV.getformat(out_extra)) == nbits
+    @test WAV.isformat(WAV.getformat(out_extra), WAV.WAVE_FORMAT_IEEE_FLOAT)
+    @test WAV.getformat(out_extra).nchannels == nchans
     if nsamples > 0
         @test absdiff(out_data, in_data) < tol
     end
@@ -478,9 +483,9 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
         @test typeof(out_data) == Array{Float64, 2}
         @test out_fs == fs
         @test out_nbits == nbits
-        @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
-        @test out_extra[:fmt].nchannels == nchans
-        @test WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
+        @test WAV.bits_per_sample(WAV.getformat(out_extra)) == nbits
+        @test WAV.getformat(out_extra).nchannels == nchans
+        @test WAV.isformat(WAV.getformat(out_extra), WAV.WAVE_FORMAT_IEEE_FLOAT)
         @test absdiff(out_data, in_data[1:subsamples, :]) < tol
 
         seek(io, 0)
@@ -492,9 +497,9 @@ for nbits = (32, 64), nsamples = convert(Array{Int}, [0; logspace(1, 4, 4)]), nc
         @test typeof(out_data) == Array{Float64, 2}
         @test out_fs == fs
         @test out_nbits == nbits
-        @test WAV.bits_per_sample(out_extra[:fmt]) == nbits
-        @test WAV.isformat(out_extra[:fmt], WAV.WAVE_FORMAT_IEEE_FLOAT)
-        @test out_extra[:fmt].nchannels == nchans
+        @test WAV.bits_per_sample(WAV.getformat(out_extra)) == nbits
+        @test WAV.isformat(WAV.getformat(out_extra), WAV.WAVE_FORMAT_IEEE_FLOAT)
+        @test WAV.getformat(out_extra).nchannels == nchans
         @test absdiff(out_data, in_data[sr, :]) < tol
     end
 end
@@ -504,17 +509,37 @@ let
     fs = 8000.0
     in_data = rand(1024, 2)
     io = IOBuffer()
-    in_chunks = Dict(:test=>[0x1, 0x2, 0x3])
+    in_chunks = [(:test, [0x1, 0x2, 0x3])]
     WAV.wavwrite(in_data, io, Fs=fs, chunks=in_chunks)
 
     seek(io, 0)
     data, fs, nbits, ext = WAV.wavread(io)
 
-    @test haskey(ext, :test) == true
-    @test ext[:test] == in_chunks[:test]
+    @test findfirst(c -> c[1] == :test, ext) > 0
+    test_chunk = ext[findfirst(c -> c[1] == :test, ext)]
+    @test test_chunk == in_chunks[1]
     @test length(data) == length(in_data)
     @test isapprox(data, in_data; atol=1.0e-6)
 end
+
+### Multiple LIST chunks, GitHub Issue #55
+let
+    fs = 8000.0
+    in_data = rand(1024, 2)
+    io = IOBuffer()
+    in_chunks = [(:LIST, [0x1, 0x2, 0x3]), (:LIST, [0x4, 0x5, 0x6])]
+    WAV.wavwrite(in_data, io, Fs=fs, chunks=in_chunks)
+
+    seek(io, 0)
+    data, fs, nbits, ext = WAV.wavread(io)
+
+    @test length(find(c -> c[1] == :LIST, ext)) == length(in_chunks)
+    list_chunks = ext[find(c -> c[1] == :LIST, ext)]
+    @test list_chunks == in_chunks
+    @test length(data) == length(in_data)
+    @test isapprox(data, in_data; atol=1.0e-6)
+end
+
 
 ### WAVArray
 struct TestHtmlDisplay <: Display

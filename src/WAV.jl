@@ -58,6 +58,7 @@ const WAVE_FORMAT_EXTENSIBLE = 0xfffe # Extension!
 isextensible(fmt::WAVFormat) = (fmt.compression_code == WAVE_FORMAT_EXTENSIBLE)
 bits_per_sample(fmt::WAVFormat) = isextensible(fmt) ? fmt.ext.nbits : fmt.nbits
 
+
 # DEFINE_GUIDSTRUCT("00000001-0000-0010-8000-00aa00389b71", KSDATAFORMAT_SUBTYPE_PCM);
 const KSDATAFORMAT_SUBTYPE_PCM = [
 0x01, 0x00, 0x00, 0x00,
@@ -90,6 +91,7 @@ const KSDATAFORMAT_SUBTYPE_ALAW = [
 0x80, 0x00,
 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71
                                    ]
+getformat(chunks::Vector{Tuple{Symbol, Any}})::WAVFormat = chunks[findfirst(c -> c[1] == :fmt, chunks)][2]
 
 function isformat(fmt::WAVFormat, code)
     if code != WAVE_FORMAT_EXTENSIBLE && isextensible(fmt)
