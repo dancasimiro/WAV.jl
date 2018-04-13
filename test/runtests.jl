@@ -56,7 +56,8 @@ let
     @test typeof(y) == Array{Float32, 2}
     @test fs == 8000.0
     @test nbits == 32
-    @test WAV.isformat(WAV.getformat(extra), WAV.WAVE_FORMAT_IEEE_FLOAT)
+    fmt = WAV.getformat(extra)
+    @test WAV.isformat(fmt, WAV.WAVE_FORMAT_IEEE_FLOAT)
 end
 
 ## malformed subchunk header, GitHub Issue #18
@@ -509,15 +510,16 @@ let
     fs = 8000.0
     in_data = rand(1024, 2)
     io = IOBuffer()
-    in_chunks = [(:test, [0x1, 0x2, 0x3])]
+    in_chunks = [WAV.WAVChunk(:test, [0x1, 0x2, 0x3])]
     WAV.wavwrite(in_data, io, Fs=fs, chunks=in_chunks)
 
     seek(io, 0)
     data, fs, nbits, ext = WAV.wavread(io)
 
-    @test findfirst(c -> c[1] == :test, ext) > 0
-    test_chunk = ext[findfirst(c -> c[1] == :test, ext)]
-    @test test_chunk == in_chunks[1]
+    @test findfirst(c -> c.id == :test, ext) > 0
+    test_chunk = ext[findfirst(c -> c.id == :test, ext)]
+    @test test_chunk.id == in_chunks[1].id
+    @test test_chunk.data == in_chunks[1].data
     @test length(data) == length(in_data)
     @test isapprox(data, in_data; atol=1.0e-6)
 end
@@ -527,19 +529,59 @@ let
     fs = 8000.0
     in_data = rand(1024, 2)
     io = IOBuffer()
-    in_chunks = [(:LIST, [0x1, 0x2, 0x3]), (:LIST, [0x4, 0x5, 0x6])]
+    in_chunks = [WAV.WAVChunk(:LIST, [0x1, 0x2, 0x3]), WAV.WAVChunk(:LIST, [0x4, 0x5, 0x6])]
     WAV.wavwrite(in_data, io, Fs=fs, chunks=in_chunks)
 
     seek(io, 0)
     data, fs, nbits, ext = WAV.wavread(io)
 
-    @test length(find(c -> c[1] == :LIST, ext)) == length(in_chunks)
-    list_chunks = ext[find(c -> c[1] == :LIST, ext)]
-    @test list_chunks == in_chunks
+    @test length(find(c -> c.id == :LIST, ext)) == length(in_chunks)
+    list_chunks = ext[find(c -> c.id == :LIST, ext)]
+    for (c, i) in zip(list_chunks, in_chunks)
+        @test c.id == i.id
+        @test c.data == i.data
+    end
     @test length(data) == length(in_data)
     @test isapprox(data, in_data; atol=1.0e-6)
 end
 
+# Test WAVMarker and WavChunk
+let
+    io = IOBuffer()
+    fs = 16000
+    samples = rand(fs)
+    markers = Dict{UInt32, WAV.WAVMarker}()
+    markers[1] = WAV.WAVMarker("Foo", 42, 1337)
+    markers[2] = WAV.WAVMarker("Bar", 1337, 42)
+
+    marker_chunks = WAV.wav_cue_write(markers)
+
+    title = "Never Gonna Give You Up"
+    artist = "Rick Astley"
+    tags = Dict{Symbol, String}()
+    tags[:INAM] = title
+    tags[:IART] = artist
+    tag_chunks = WAV.wav_info_write(tags)
+
+    out_chunks = [tag_chunks; marker_chunks]
+
+    WAV.wavwrite(samples, io, Fs=fs, nbits=16, compression=WAV.WAVE_FORMAT_PCM, chunks=out_chunks)
+    seek(io, 0)
+
+    x, fs, bits, in_chunks = WAV.wavread(io)
+    in_markers = WAV.wav_cue_read(in_chunks)
+
+    @test length(in_markers) == length(markers)
+    for k in keys(in_markers)
+        @test in_markers[k].label == markers[k].label
+        @test in_markers[k].start_time == markers[k].start_time
+        @test in_markers[k].duration == markers[k].duration
+    end
+
+    in_info = WAV.wav_info_read(in_chunks)
+    @test in_info[:INAM] == title
+    @test in_info[:IART] == artist
+end
 
 ### WAVArray
 struct TestHtmlDisplay <: Display

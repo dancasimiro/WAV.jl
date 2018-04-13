@@ -2,6 +2,7 @@
 Base.__precompile__(true)
 module WAV
 export wavread, wavwrite, wavappend, wavplay
+export WAVChunk, WAVMarker, wav_cue_read, wav_cue_write, wav_info_write, wav_info_read
 export WAVArray, WAVFormatExtension, WAVFormat
 export isextensible, isformat, bits_per_sample
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
@@ -20,12 +21,12 @@ function __init__()
 end
 
 include("AudioDisplay.jl")
+include("WavChunk.jl")
 wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
 write_le(stream::IO, value) = write(stream, htol(value))
 read_le(stream::IO, x::Type) = ltoh(read(stream, x))
-
 
 # used by WAVE_FORMAT_EXTENSIBLE
 struct WAVFormatExtension
@@ -91,7 +92,11 @@ const KSDATAFORMAT_SUBTYPE_ALAW = [
 0x80, 0x00,
 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71
                                    ]
-getformat(chunks::Vector{Tuple{Symbol, Any}})::WAVFormat = chunks[findfirst(c -> c[1] == :fmt, chunks)][2]
+function getformat(chunks::Vector{WAVChunk})::WAVFormat
+    data = chunks[findfirst(c -> c.id == Symbol("fmt "), chunks)].data
+    buf = IOBuffer(data[5:end])
+    return read_format(buf, convert(UInt32, length(data[5:end])))
+end
 
 function isformat(fmt::WAVFormat, code)
     if code != WAVE_FORMAT_EXTENSIBLE && isextensible(fmt)
@@ -180,11 +185,16 @@ function read_format(io::IO, chunk_size::UInt32)
                      WAVFormatExtension(ext))
 end
 
-function write_format(io::IO, fmt::WAVFormat)
+function format_length(fmt::WAVFormat)
     len = 16 # 16 is size of base format chunk
     if isextensible(fmt)
         len += 24 # 24 is the added length needed to encode the extension
     end
+    return len
+end
+
+function write_format(io::IO, fmt::WAVFormat)
+    len = format_length(fmt)
     # write the fmt subchunk header
     write(io, b"fmt ")
     write_le(io, convert(UInt32, len)) # subchunk length
@@ -203,6 +213,13 @@ function write_format(io::IO, fmt::WAVFormat)
         @assert length(fmt.ext.sub_format) == 16
         write(io, fmt.ext.sub_format)
     end
+end
+
+function WAVChunk(fmt::WAVFormat)
+    io = IOBuffer()
+    write_format(io, fmt)
+    data = take!(io)[5:end]
+    WAVChunk(Symbol("fmt "), data)
 end
 
 function pcm_container_type(nbits::Unsigned)
@@ -591,7 +608,7 @@ function wavread(io::IO; subrange=Void, format="double")
     samples = Array{Float64, 1}()
     nbits = 0
     sample_rate = Float32(0.0)
-    opt = Tuple{Symbol, Any}[]
+    opt = WAVChunk[]
 
     # Note: This assumes that the format chunk is written in the file before the data chunk. The
     # specification does not require this assumption, but most real files are written that way.
@@ -617,7 +634,7 @@ function wavread(io::IO; subrange=Void, format="double")
             fmt = read_format(io, subchunk_size)
             sample_rate = Float32(fmt.sample_rate)
             nbits = bits_per_sample(fmt)
-            push!(opt, (:fmt, fmt))
+            push!(opt, WAVChunk(fmt))
         elseif subchunk_id == b"data"
             if format == "size"
                 return convert(Int, subchunk_size / fmt.block_align), convert(Int, fmt.nchannels)
@@ -625,8 +642,8 @@ function wavread(io::IO; subrange=Void, format="double")
             samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
             subchunk_data = Array{UInt8}(subchunk_size)
-            push!(opt, (Symbol(subchunk_id), subchunk_data))
             read!(io, subchunk_data)
+            push!(opt, WAVChunk(Symbol(subchunk_id), subchunk_data))
         end
     end
     return samples, sample_rate, nbits, opt
@@ -659,7 +676,7 @@ function get_default_precision(samples, compression)
 end
 
 function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=0,
-                  chunks::Vector{Tuple{Symbol, Array{UInt8,1}}}=Tuple{Symbol, Array{UInt8,1}}[])
+                  chunks::Vector{WAVChunk}=WAVChunk[])
     if compression == 0
         compression = get_default_compression(samples)
     elseif compression == WAVE_FORMAT_ALAW || compression == WAVE_FORMAT_MULAW
@@ -675,7 +692,7 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
     block_align = my_nbits / 8 * nchannels
     bps = sample_rate * block_align
     data_length::UInt32 = size(samples, 1) * block_align
-    extra_length::UInt32 = 8 * length(chunks) + sum([length(c) for (_, c) in chunks])
+    extra_length::UInt32 = 8 * length(chunks) + sum([length(c.data) for c in chunks])
     ext = WAVFormatExtension()
 
     if nchannels > 2 || my_nbits > 16 || my_nbits != nbits
@@ -709,9 +726,9 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
     write_format(io, fmt)
 
     for eachchunk in chunks
-        write(io, eachchunk[1])
-        write_le(io, UInt32(length(eachchunk[2])))
-        for eachbyte in eachchunk[2]
+        write(io, eachchunk.id)
+        write_le(io, UInt32(length(eachchunk.data)))
+        for eachbyte in eachchunk.data
             write(io, eachbyte)
         end
     end
@@ -723,7 +740,7 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
 end
 
 function wavwrite(samples::AbstractArray, filename::AbstractString; Fs=8000, nbits=0, compression=0,
-                  chunks::Vector{Tuple{Symbol, Array{UInt8,1}}}=Tuple{Symbol, Array{UInt8,1}}[])
+                  chunks::Vector{WAVChunk}=WAVChunk[])
     open(filename, "w") do io
         wavwrite(samples, io, Fs=Fs, nbits=nbits, compression=compression, chunks=chunks)
     end
