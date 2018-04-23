@@ -63,12 +63,23 @@ The returned values are:
 * ``nbits``: The number of bits used to encode each sample
 * ``opt``: A vector of ```WAVChunk``` of optional chunks found in the WAV file.
 
-The elements in the ``opt`` vector depends on the contents
-of the WAV file. All valid WAV files will contain a "fmt" chunk.
+The elements in the ``opt`` vector depend on the contents
+of the WAV file.
+
+A ``WAVChunk`` is defined as
+```julia
+type WAVChunk
+    id::Symbol
+    data::Vector{UInt8}
+end
+```
+
+where the ID is the four-character chunk ID. All valid WAV files will contain a ``fmt`` chunk,
+with ID ``Symbol("fmt ")`` (note the trailing space).
 
 In order to obtain the contents of the format chunk,
 call ``getformat(opt)``. This will return an instance of type
-``WAVFormat``. The ``WAVFormat`` type is defined as::
+``WAVFormat``. The ``WAVFormat`` type is defined as:
 
 ```julia
 immutable WAVFormat
@@ -82,7 +93,7 @@ immutable WAVFormat
 end
 ```
 
-The ```ext``` field of type ```WAVFormatExtension``` is defined as::
+The ```ext``` field of type ```WAVFormatExtension``` is defined as:
 
 ```julia
 immutable WAVFormatExtension
@@ -103,8 +114,8 @@ original specification.
 isformat(fmt::WAVFormat, code)
 ```
 
-The ```isformat``` function takes the format object from the ```opt```
-output dictionary of ```wavread``` and one of ```WAV_FORMAT_```
+The ```isformat``` function takes the ``WAVFormat`` object returned by
+``getformat`` and one of ```WAV_FORMAT_```
 constants, respectively. The function returns ```true``` when the
 samples are encoded in the specified ```code```.
 
@@ -140,8 +151,8 @@ The available options, and the default values, are:
    * ``Fs`` (default = ``8000``): sampling frequency
    * ``nbits`` (default = ``16``): number of bits used to encode each
      sample
-   * ``compression (default = ``WAV_FORMAT_PCM``)``: controls the type of encoding used in the file
-   * ``chunks`` (default = ``WAVChunk[]``): a vector of ``WAVChunk`` objects to be written to the file (in addition to the format chunk). See ``WAVChunk.jl`` for some utilities for creating ``CUE`` and ``INFO``
+   * ``compression`` (default = ``WAV_FORMAT_PCM``): controls the type of encoding used in the file
+   * ``chunks`` (default = ``WAVChunk[]``): a vector of ``WAVChunk`` objects to be written to the file (in addition to the format chunk). See below for some utilities for creating ``CUE`` and ``INFO``
    chunks.
 
 The type of the input array, samples, also affects the generated
@@ -206,14 +217,14 @@ function wavplay(samples::Array, fs::Number)
 WAVChunk
 ---
 
-Experimental support for reading and writing ``CUE`` and ``INFO`` chunks has been added.
-The function
-```
+Experimental support for reading and writing ``CUE`` and ``INFO`` chunks has been added in
+version 1. The function
+```julia
 wav_cue_read(chunks::Vector{WAVChunk})
 ```
 takes a ``Vector{WAVChunk}`` (as returned by ``wavread``) and returns a ``Vector{WAVMarker}``,
 where a ``WAVMarker`` is defined as:
-```
+```julia
 type WAVMarker
     label::String
     start_time::UInt32
@@ -223,18 +234,18 @@ end
 
 Where ``start_time`` and ``duration`` are in samples.
 You can also turn ``WAVMarker``s into a ``Vector{WAVChunk}`` (as accepted by ``wavwrite``) by calling
-```
+```julia
 wav_cue_write(markers::Dict{UInt32, WAVMarker})
 ```
 where the key for the dictionary is the ID of the marker to be written to file.
 
 Similar functions exist for ``INFO`` chunks, namely
-```
+```julia
 wav_info_write(tags::Dict{Symbol, String})::Vector{WAVChunk}
 wav_info_read(chunks::Vector{WAVChunk})::Dict{Symbol, String}
 ```
 
-where the keys for the ``Dict{Symbol, String}`` should be RIFF INFO tag IDs as specified [here](https://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/RIFF.html#Info). The values of the dictionary
+where the keys for the ``Dict{Symbol, String}`` should be four-character RIFF INFO tag IDs as specified [here](https://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/RIFF.html#Info). The values of the dictionary
 correspond to the tag data.
 
 Other Julia Audio Packages
