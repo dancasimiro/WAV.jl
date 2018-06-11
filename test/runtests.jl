@@ -232,6 +232,41 @@ seek(io, 0)
 x, fs, nbits, extra = WAV.wavread(io)
 @test x == [x0; x1; x2]
 
+## Test correct reading of 44-byte headers when using `wavappend()`
+number_bits = 16
+number_channels = 2
+number_samples = 16000
+sampling_frequency = 16000
+x0 = rand(number_samples, number_channels)
+x1 = rand(2*number_samples, number_channels)
+io = IOBuffer()
+### Write first chunk to wav-file
+WAV.wavwrite(
+    x0,
+    io,
+    Fs=sampling_frequency,
+    nbits=number_bits,
+    compression=WAV.WAVE_FORMAT_PCM)
+seek(io, 4)
+chunk_size_old = WAV.read_le(io, UInt32)
+seek(io, 40)
+data_length_old = WAV.read_le(io, UInt32)
+### Append second chunk to wav-file 
+WAV.wavappend(
+    x1,
+    io)
+seek(io, 4)
+chunk_size_new = WAV.read_le(io, UInt32)
+seek(io, 40)
+data_length_new = WAV.read_le(io, UInt32)
+### Compare data lengths. 
+data_length_old_in_samples =
+    round(Int32, data_length_old/(number_channels*number_bits)*8)
+data_length_new_in_samples =
+    round(Int32, data_length_new/(number_channels*number_bits)*8)
+@test data_length_new_in_samples == 3*data_length_old_in_samples 
+@test (chunk_size_new-36) == 3*(chunk_size_old-36)
+
 ## Test native encoding of 8 bits
 for nchans = (1,2,4)
     in_data_8 = reshape(typemin(UInt8):typemax(UInt8), (trunc(Int, 256 / nchans), nchans))
