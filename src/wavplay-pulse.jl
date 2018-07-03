@@ -1,6 +1,6 @@
 # -*- mode: julia; -*-
 module WAVPlay
-import WAV.wavplay
+import ..wavplay
 
 # typedef enum pa_sample_format
 const PA_SAMPLE_U8        =  0 # Unsigned 8 Bit PCM

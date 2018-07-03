@@ -1,6 +1,6 @@
 # -*- mode: julia; -*-
 module WAVPlay
-import WAV.wavplay
+import ..wavplay
 
 const OSStatus = Int32
 const CFTypeRef = Ptr{Void}
