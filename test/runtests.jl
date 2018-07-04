@@ -3,7 +3,7 @@
 import WAV
 using Compat.Test
 using Compat
-using Compat: String, undef
+using Compat: findall, String, undef
 
 # These float array comparison functions are from dists.jl
 function absdiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
@@ -570,8 +570,8 @@ let
     seek(io, 0)
     data, fs, nbits, ext = WAV.wavread(io)
 
-    @test length(find(c -> c.id == :LIST, ext)) == length(in_chunks)
-    list_chunks = ext[find(c -> c.id == :LIST, ext)]
+    @test length(findall(c -> c.id == :LIST, ext)) == length(in_chunks)
+    list_chunks = ext[findall(c -> c.id == :LIST, ext)]
     for (c, i) in zip(list_chunks, in_chunks)
         @test c.id == i.id
         @test c.data == i.data

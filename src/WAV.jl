@@ -6,7 +6,7 @@ export WAVChunk, WAVMarker, wav_cue_read, wav_cue_write, wav_info_write, wav_inf
 export WAVArray, WAVFormatExtension, WAVFormat
 export isextensible, isformat, bits_per_sample
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
-using Compat: nothing, Nothing, undef
+using Compat: codeunits, findall, nothing, Nothing, undef
 import Compat: Libdl
 using FileIO
 
