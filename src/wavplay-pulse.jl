@@ -2,7 +2,7 @@
 module WAVPlay
 import ..wavplay
 
-using Compat: undef
+using Compat: Cvoid, undef
 
 # typedef enum pa_sample_format
 const PA_SAMPLE_U8        =  0 # Unsigned 8 Bit PCM
@@ -73,7 +73,7 @@ struct pa_buffer_attr
     fragsize::UInt32
 end
 
-const pa_simple = Ptr{Void}
+const pa_simple = Ptr{Cvoid}
 const LibPulseSimple = "libpulse-simple"
 const PA_STREAM_PLAYBACK = 1
 const PA_CHANNEL_MAP_AIFF = 0
@@ -120,7 +120,7 @@ function wavplay(data, fs)
 
     write_ret = ccall((:pa_simple_write, LibPulseSimple),
                       Cint,
-                      (pa_simple, Ptr{Void}, Csize_t, Ptr{Cint}),
+                      (pa_simple, Ptr{Cvoid}, Csize_t, Ptr{Cint}),
                       s, samples, sizeof(samples), C_NULL)
     if write_ret != 0
         error("pa_simple_write failed with $write_ret")
@@ -133,6 +133,6 @@ function wavplay(data, fs)
         error("pa_simple_drain failed with $drain_ret")
     end
 
-    ccall((:pa_simple_free, LibPulseSimple), Void, (pa_simple,), s)
+    ccall((:pa_simple_free, LibPulseSimple), Cvoid, (pa_simple,), s)
 end
 end # module

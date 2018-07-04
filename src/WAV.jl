@@ -6,7 +6,7 @@ export WAVChunk, WAVMarker, wav_cue_read, wav_cue_write, wav_info_write, wav_inf
 export WAVArray, WAVFormatExtension, WAVFormat
 export isextensible, isformat, bits_per_sample
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
-using Compat: undef
+using Compat: nothing, Nothing, undef
 using FileIO
 
 function __init__()
@@ -518,7 +518,11 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
     # "format" is the format of values, while "fmt" is the WAV file level format
     convert_to_double = x -> convert(Array{Float64}, x)
 
-    if subrange === Void
+    if subrange === Nothing
+        Base.depwarn("`wavread(..., subrange=Nothing)` is deprecated, use `wavread(..., subrange=:)` instead.", :read_data)
+        subrange = (:)
+    end
+    if subrange === (:)
         # each block stores fmt.nchannels channels
         subrange = 1:convert(UInt, chunk_size / fmt.block_align)
     end
@@ -604,7 +608,7 @@ end
 make_range(subrange) = subrange
 make_range(subrange::Number) = 1:convert(Int, subrange)
 
-function wavread(io::IO; subrange=Void, format="double")
+function wavread(io::IO; subrange=(:), format="double")
     chunk_size = read_header(io)
     samples = Array{Float64, 1}()
     nbits = 0
@@ -650,7 +654,7 @@ function wavread(io::IO; subrange=Void, format="double")
     return samples, sample_rate, nbits, opt
 end
 
-function wavread(filename::AbstractString; subrange=Void, format="double")
+function wavread(filename::AbstractString; subrange=(:), format="double")
     open(filename, "r") do io
         wavread(io, subrange=subrange, format=format)
     end
