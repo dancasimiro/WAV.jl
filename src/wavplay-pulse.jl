@@ -110,7 +110,7 @@ function wavplay(data, fs)
               PA_STREAM_PLAYBACK,
               C_NULL, # Use the default device
               "wavplay", # description of stream
-              &ss,
+              Ref(ss),
               C_NULL, # Use default channel map
               C_NULL, # Use default buffering attributes
               C_NULL) # Ignore error code
