@@ -3,7 +3,7 @@
 import WAV
 using Compat.Test
 using Compat
-using Compat: findall, String, undef
+using Compat: AbstractDisplay, findall, occursin, repr, String, undef
 
 # These float array comparison functions are from dists.jl
 function absdiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
@@ -619,11 +619,11 @@ let
 end
 
 ### WAVArray
-struct TestHtmlDisplay <: Display
+struct TestHtmlDisplay <: AbstractDisplay
     io::IOBuffer
 end
 function display(d::TestHtmlDisplay, mime::MIME"text/html", x)
-    print(d.io, reprmime(mime, x))
+    print(d.io, repr(mime, x))
 end
 
 let
@@ -631,7 +631,7 @@ let
     wa = WAV.WAVArray(8000, sin.(1:256 * 8000.0 / 1024));
     myio = IOBuffer()
     display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
-    @test ismatch(r"audio controls", String(take!(copy(myio))))
+    @test occursin(r"audio controls", String(take!(copy(myio))))
 end
 
 ### playback
