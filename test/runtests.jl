@@ -1,7 +1,7 @@
 ## -*-Julia-*-
 ## Test suite for Julia's WAV module
 import WAV
-using Base.Test
+using Compat.Test
 using Compat
 using Compat: String, undef
 
