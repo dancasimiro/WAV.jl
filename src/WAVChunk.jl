@@ -1,7 +1,7 @@
 """
 A RIFF chunk.
 """
-type WAVChunk
+struct WAVChunk
     id::Symbol
     data::Vector{UInt8}
 end
@@ -9,7 +9,7 @@ end
 """
 A marker in a .wav file. `start_time` and `duration` are in samples.
 """
-type WAVMarker
+mutable struct WAVMarker
     label::String
     start_time::UInt32
     duration::UInt32
