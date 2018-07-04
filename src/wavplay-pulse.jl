@@ -3,6 +3,7 @@ module WAVPlay
 import ..wavplay
 
 using Compat: Cvoid, undef
+import Compat: Libdl
 
 # typedef enum pa_sample_format
 const PA_SAMPLE_U8        =  0 # Unsigned 8 Bit PCM
@@ -74,7 +75,7 @@ struct pa_buffer_attr
 end
 
 const pa_simple = Ptr{Cvoid}
-const LibPulseSimple = "libpulse-simple"
+const LibPulseSimple = Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"])
 const PA_STREAM_PLAYBACK = 1
 const PA_CHANNEL_MAP_AIFF = 0
 const PA_CHANNEL_MAP_DEFAULT = PA_CHANNEL_MAP_AIFF

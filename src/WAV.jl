@@ -12,7 +12,7 @@ using FileIO
 
 function __init__()
     module_dir = dirname(@__FILE__)
-    if Libdl.find_library(["libpulse-simple"]) != ""
+    if Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"]) != ""
         include(joinpath(module_dir, "wavplay-pulse.jl"))
     elseif Libdl.find_library(["AudioToolbox"],
                               ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
