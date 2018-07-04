@@ -6,6 +6,7 @@ export WAVChunk, WAVMarker, wav_cue_read, wav_cue_write, wav_info_write, wav_inf
 export WAVArray, WAVFormatExtension, WAVFormat
 export isextensible, isformat, bits_per_sample
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
+using Compat: undef
 using FileIO
 
 function __init__()
@@ -33,7 +34,7 @@ struct WAVFormatExtension
     nbits::UInt16 # overrides nbits in WAVFormat type
     channel_mask::UInt32
     sub_format::Array{UInt8, 1} # 16 byte GUID
-    WAVFormatExtension() = new(0, 0, Array{UInt8, 1}(0))
+    WAVFormatExtension() = new(0, 0, UInt8[])
     WAVFormatExtension(nb, cm, sb) = new(nb, cm, sb)
 end
 
@@ -100,7 +101,7 @@ end
 
 function isformat(fmt::WAVFormat, code)
     if code != WAVE_FORMAT_EXTENSIBLE && isextensible(fmt)
-        subtype = Array{UInt8, 1}(0)
+        subtype = UInt8[]
         if code == WAVE_FORMAT_PCM
             subtype = KSDATAFORMAT_SUBTYPE_PCM
         elseif code == WAVE_FORMAT_IEEE_FLOAT
@@ -130,7 +131,7 @@ end
 
 function read_header(io::IO)
     # check if the given file has a valid RIFF header
-    riff = Array{UInt8}(4)
+    riff = Vector{UInt8}(undef, 4)
     read!(io, riff)
     if riff !=  b"RIFF"
         error("Invalid WAV file: The RIFF header is invalid")
@@ -139,7 +140,7 @@ function read_header(io::IO)
     chunk_size = read_le(io, UInt32)
 
     # check if this is a WAV file
-    format = Array{UInt8}(4)
+    format = Vector{UInt8}(undef, 4)
     read!(io, format)
     if format != b"WAVE"
         error("Invalid WAV file: the format is not WAVE")
@@ -167,12 +168,12 @@ function read_format(io::IO, chunk_size::UInt32)
     bytes_per_second = read_le(io, UInt32)
     block_align = read_le(io, UInt16)
     nbits = read_le(io, UInt16)
-    ext = Array{UInt8, 1}(0)
+    ext = UInt8[]
     chunk_size -= 16
     if chunk_size > 0
         extra_bytes_length = read_le(io, UInt16)
         if extra_bytes_length == 22
-            ext = Array{UInt8}(extra_bytes_length)
+            ext = Vector{UInt8}(undef, extra_bytes_length)
             read!(io, ext)
         end
     end
@@ -238,9 +239,9 @@ ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float
 function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     nbits = bits_per_sample(fmt)
     if isempty(subrange)
-        return Array{pcm_container_type(nbits), 2}(0, fmt.nchannels)
+        return Array{pcm_container_type(nbits), 2}(undef, 0, fmt.nchannels)
     end
-    samples = Array{pcm_container_type(nbits), 2}(length(subrange), fmt.nchannels)
+    samples = Array{pcm_container_type(nbits), 2}(undef, length(subrange), fmt.nchannels)
     sample_type = eltype(samples)
     nbytes = ceil(Integer, nbits / 8)
     bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
@@ -251,7 +252,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
-            raw_sample = Array{UInt8}(nbytes)
+            raw_sample = Vector{UInt8}(undef, nbytes)
             read!(io, raw_sample)
             my_sample = UInt64(0)
             for k = 1:nbytes
@@ -268,10 +269,10 @@ end
 
 function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, floatType)
     if isempty(subrange)
-        return Array{floatType, 2}(0, fmt.nchannels)
+        return Array{floatType, 2}(undef, 0, fmt.nchannels)
     end
     nblocks = length(subrange)
-    samples = Array{floatType, 2}(nblocks, fmt.nchannels)
+    samples = Array{floatType, 2}(undef, nblocks, fmt.nchannels)
     nbits = bits_per_sample(fmt)
     skip(io, convert(UInt, (first(subrange) - 1) * (nbits / 8) * fmt.nchannels))
     for i = 1:nblocks
@@ -290,10 +291,10 @@ end
 
 function read_companded_samples(io::IO, fmt::WAVFormat, subrange, table)
     if isempty(subrange)
-        return Array{eltype(table), 2}(0, fmt.nchannels)
+        return Array{eltype(table), 2}(undef, 0, fmt.nchannels)
     end
     nblocks = length(subrange)
-    samples = Array{eltype(table), 2}(nblocks, fmt.nchannels)
+    samples = Array{eltype(table), 2}(undef, nblocks, fmt.nchannels)
     skip(io, convert(UInt, (first(subrange) - 1) * fmt.nchannels))
     for i = 1:nblocks
         for j = 1:fmt.nchannels
@@ -621,7 +622,7 @@ function wavread(io::IO; subrange=Void, format="double")
     fmt = WAVFormat()
     while chunk_size >= subchunk_header_size
         # Read subchunk ID and size
-        subchunk_id = Array{UInt8}(4)
+        subchunk_id = Vector{UInt8}(undef, 4)
         read!(io, subchunk_id)
         subchunk_size = read_le(io, UInt32)
         if subchunk_size > chunk_size
@@ -641,7 +642,7 @@ function wavread(io::IO; subrange=Void, format="double")
             end
             samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
         else
-            subchunk_data = Array{UInt8}(subchunk_size)
+            subchunk_data = Vector{UInt8}(undef, subchunk_size)
             read!(io, subchunk_data)
             push!(opt, WAVChunk(Symbol(subchunk_id), subchunk_data))
         end
@@ -699,7 +700,7 @@ function wavwrite(samples::AbstractArray, io::IO; Fs=8000, nbits=0, compression=
         compression_code = WAVE_FORMAT_EXTENSIBLE
         valid_bits_per_sample = nbits
         channel_mask = 0
-        sub_format = Array{UInt8, 1}(0)
+        sub_format = UInt8[]
         if compression == WAVE_FORMAT_PCM
             sub_format = KSDATAFORMAT_SUBTYPE_PCM
         elseif compression == WAVE_FORMAT_IEEE_FLOAT
@@ -749,7 +750,7 @@ end
 function wavappend(samples::AbstractArray, io::IO)
     seekstart(io)
     chunk_size = read_header(io)
-    subchunk_id = Array{UInt8}(4)
+    subchunk_id = Vector{UInt8}(undef, 4)
     read!(io, subchunk_id)
     subchunk_size = read_le(io, UInt32)
     if subchunk_id != b"fmt "

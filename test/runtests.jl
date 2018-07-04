@@ -3,7 +3,7 @@
 import WAV
 using Base.Test
 using Compat
-using Compat.String
+using Compat: String, undef
 
 # These float array comparison functions are from dists.jl
 function absdiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
@@ -134,7 +134,7 @@ let
 end
 
 function testread(io, ::Type{T}, sz) where T <: Real
-    a = Array{T}(sz)
+    a = Array{T}(undef, sz)
     read!(io, a)
     return a
 end

@@ -2,6 +2,8 @@
 module WAVPlay
 import ..wavplay
 
+using Compat: undef
+
 # typedef enum pa_sample_format
 const PA_SAMPLE_U8        =  0 # Unsigned 8 Bit PCM
 const PA_SAMPLE_ALAW      =  1 # 8 Bit a-Law
@@ -83,7 +85,7 @@ function wavplay(data, fs)
 
     # Manually layout the samples.
     # convert doesn't lay out the samples as pulse audio expects
-    samples = Array{Float32, 1}(size(data, 1) * size(data, 2))
+    samples = Array{Float32, 1}(undef, size(data, 1) * size(data, 2))
     idx = 1
     for i = 1:size(data, 1)
         for j = 1:size(data, 2)

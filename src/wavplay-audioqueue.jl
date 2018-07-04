@@ -2,6 +2,8 @@
 module WAVPlay
 import ..wavplay
 
+using Compat: undef
+
 const OSStatus = Int32
 const CFTypeRef = Ptr{Void}
 const CFRunLoopRef = Ptr{Void}
@@ -146,7 +148,7 @@ end
 #     audio queue buffer structure, AudioQueueBuffer, is initially set to 0.
 # @result     An OSStatus result code.
 function AudioQueueAllocateBuffer(aq)
-    newBuffer = Array{AudioQueueBufferRef, 1}(1)
+    newBuffer = Array{AudioQueueBufferRef, 1}(undef, 1)
     result =
         ccall((:AudioQueueAllocateBuffer, AudioToolbox), OSStatus,
               (AudioQueueRef, UInt32, Ptr{AudioQueueBufferRef}),
@@ -263,7 +265,7 @@ function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::Audi
     userData.runLoop = runLoop
     runLoopMode = getCoreFoundationRunLoopDefaultMode()
 
-    newAudioQueue = Array{AudioQueueRef, 1}(1)
+    newAudioQueue = Array{AudioQueueRef, 1}(undef, 1)
     cCallbackProc = cfunction(playCallback, Void,
                               (Ptr{AudioQueueData}, AudioQueueRef, AudioQueueBufferRef))
     result =
