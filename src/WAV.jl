@@ -761,18 +761,18 @@ function wavappend(samples::AbstractArray, io::IO)
         error("Number of channels do not match")
     end
 
-    # Compute data length of current chunk to-be-appended. 
+    # Compute data length of current chunk to-be-appended.
     data_length = size(samples, 1) * fmt.block_align
-    # Update `chunksize`: add length of new data. 
+    # Update `chunksize`: add length of new data.
     seek(io,4)
     write_le(io, convert(UInt32, chunk_size + data_length))
-    # Get `subchunk2size`. 
-    seek(io,40)
+    # Get `subchunk2size`.
+    seek(io, 24 + subchunk_size)
     data_length_old = read_le(io, UInt32)
-    # Update `subchunk2size`: add length of new data. 
-    seek(io,40)
+    # Update `subchunk2size`: add length of new data.
+    seek(io, 24 + subchunk_size)
     write_le(io, convert(UInt32, data_length_old + data_length))
-    
+
     seekend(io)
     write_data(io, fmt, samples)
 end
