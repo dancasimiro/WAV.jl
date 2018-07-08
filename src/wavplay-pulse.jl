@@ -1,6 +1,9 @@
 # -*- mode: julia; -*-
 module WAVPlay
-import WAV.wavplay
+import ..wavplay
+
+using Compat: Cvoid, undef
+import Compat: Libdl
 
 # typedef enum pa_sample_format
 const PA_SAMPLE_U8        =  0 # Unsigned 8 Bit PCM
@@ -71,8 +74,8 @@ struct pa_buffer_attr
     fragsize::UInt32
 end
 
-const pa_simple = Ptr{Void}
-const LibPulseSimple = "libpulse-simple"
+const pa_simple = Ptr{Cvoid}
+const LibPulseSimple = Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"])
 const PA_STREAM_PLAYBACK = 1
 const PA_CHANNEL_MAP_AIFF = 0
 const PA_CHANNEL_MAP_DEFAULT = PA_CHANNEL_MAP_AIFF
@@ -83,7 +86,7 @@ function wavplay(data, fs)
 
     # Manually layout the samples.
     # convert doesn't lay out the samples as pulse audio expects
-    samples = Array{Float32, 1}(size(data, 1) * size(data, 2))
+    samples = Array{Float32, 1}(undef, size(data, 1) * size(data, 2))
     idx = 1
     for i = 1:size(data, 1)
         for j = 1:size(data, 2)
@@ -108,7 +111,7 @@ function wavplay(data, fs)
               PA_STREAM_PLAYBACK,
               C_NULL, # Use the default device
               "wavplay", # description of stream
-              &ss,
+              Ref(ss),
               C_NULL, # Use default channel map
               C_NULL, # Use default buffering attributes
               C_NULL) # Ignore error code
@@ -118,7 +121,7 @@ function wavplay(data, fs)
 
     write_ret = ccall((:pa_simple_write, LibPulseSimple),
                       Cint,
-                      (pa_simple, Ptr{Void}, Csize_t, Ptr{Cint}),
+                      (pa_simple, Ptr{Cvoid}, Csize_t, Ptr{Cint}),
                       s, samples, sizeof(samples), C_NULL)
     if write_ret != 0
         error("pa_simple_write failed with $write_ret")
@@ -131,6 +134,6 @@ function wavplay(data, fs)
         error("pa_simple_drain failed with $drain_ret")
     end
 
-    ccall((:pa_simple_free, LibPulseSimple), Void, (pa_simple,), s)
+    ccall((:pa_simple_free, LibPulseSimple), Cvoid, (pa_simple,), s)
 end
 end # module

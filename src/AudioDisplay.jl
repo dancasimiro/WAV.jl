@@ -1,4 +1,5 @@
 import Base.show
+using Compat.Base64: base64encode
 
 struct WAVArray{T,N}
     Fs::Number

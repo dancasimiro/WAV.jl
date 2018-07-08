@@ -1,12 +1,14 @@
 # -*- mode: julia; -*-
 module WAVPlay
-import WAV.wavplay
+import ..wavplay
+
+using Compat: Cvoid, undef
 
 const OSStatus = Int32
-const CFTypeRef = Ptr{Void}
-const CFRunLoopRef = Ptr{Void}
-const CFStringRef = Ptr{Void}
-const AudioQueueRef = Ptr{Void}
+const CFTypeRef = Ptr{Cvoid}
+const CFRunLoopRef = Ptr{Cvoid}
+const CFStringRef = Ptr{Cvoid}
+const AudioQueueRef = Ptr{Cvoid}
 
 # format IDs
 const kAudioFormatLinearPCM = # "lpcm"
@@ -61,9 +63,9 @@ end
 # Apple Core Audio Type
 mutable struct AudioQueueBuffer
     mAudioDataBytesCapacity::UInt32
-    mAudioData::Ptr{Void}
+    mAudioData::Ptr{Cvoid}
     mAudioDataByteSize::UInt32
-    mUserData::Ptr{Void}
+    mUserData::Ptr{Cvoid}
     mPacketDescriptionCapacity::UInt32
     mPacketDescription::Ptr{AudioStreamPacketDescription}
     mPacketDescriptionCount::UInt32
@@ -78,8 +80,8 @@ const AudioToolbox =
     "/System/Library/Frameworks/AudioToolbox.framework/Versions/A/AudioToolbox"
 
 CFRunLoopGetCurrent() = ccall((:CFRunLoopGetCurrent, CoreFoundation), CFRunLoopRef, ())
-CFRunLoopRun() = ccall((:CFRunLoopRun, CoreFoundation), Void, ())
-CFRunLoopStop(rl) = ccall((:CFRunLoopStop, CoreFoundation), Void, (CFRunLoopRef, ), rl)
+CFRunLoopRun() = ccall((:CFRunLoopRun, CoreFoundation), Cvoid, ())
+CFRunLoopStop(rl) = ccall((:CFRunLoopStop, CoreFoundation), Cvoid, (CFRunLoopRef, ), rl)
 getCoreFoundationRunLoopDefaultMode() =
     unsafe_load(cglobal((:kCFRunLoopDefaultMode, CoreFoundation), CFStringRef))
 
@@ -146,7 +148,7 @@ end
 #     audio queue buffer structure, AudioQueueBuffer, is initially set to 0.
 # @result     An OSStatus result code.
 function AudioQueueAllocateBuffer(aq)
-    newBuffer = Array{AudioQueueBufferRef, 1}(1)
+    newBuffer = Array{AudioQueueBufferRef, 1}(undef, 1)
     result =
         ccall((:AudioQueueAllocateBuffer, AudioToolbox), OSStatus,
               (AudioQueueRef, UInt32, Ptr{AudioQueueBufferRef}),
@@ -175,7 +177,7 @@ function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     unsafe_store!(bufPtr, buffer)
     result = ccall((:AudioQueueEnqueueBuffer, AudioToolbox),
                    OSStatus,
-                   (AudioQueueRef, AudioQueueBufferRef, UInt32, Ptr{Void}),
+                   (AudioQueueRef, AudioQueueBufferRef, UInt32, Ptr{Cvoid}),
                    aq, bufPtr, 0, C_NULL)
     if result != 0
         error("AudioQueueEnqueueBuffer failed with $result")
@@ -263,12 +265,12 @@ function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::Audi
     userData.runLoop = runLoop
     runLoopMode = getCoreFoundationRunLoopDefaultMode()
 
-    newAudioQueue = Array{AudioQueueRef, 1}(1)
-    cCallbackProc = cfunction(playCallback, Void,
+    newAudioQueue = Array{AudioQueueRef, 1}(undef, 1)
+    cCallbackProc = cfunction(playCallback, Cvoid,
                               (Ptr{AudioQueueData}, AudioQueueRef, AudioQueueBufferRef))
     result =
         ccall((:AudioQueueNewOutput, AudioToolbox), OSStatus,
-              (Ptr{AudioStreamBasicDescription}, Ptr{Void}, Ptr{AudioQueueData}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
+              (Ptr{AudioStreamBasicDescription}, Ptr{Cvoid}, Ptr{AudioQueueData}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
               Ref(format), cCallbackProc, Ref(userData), runLoop, runLoopMode, 0, newAudioQueue)
     if result != 0
         error("AudioQueueNewOutput failed with $result")

@@ -1,7 +1,7 @@
 """
 A RIFF chunk.
 """
-type WAVChunk
+struct WAVChunk
     id::Symbol
     data::Vector{UInt8}
 end
@@ -9,7 +9,7 @@ end
 """
 A marker in a .wav file. `start_time` and `duration` are in samples.
 """
-type WAVMarker
+mutable struct WAVMarker
     label::String
     start_time::UInt32
     duration::UInt32
@@ -98,8 +98,8 @@ function wav_cue_read(chunks::Vector{WAVChunk})
     markers = Dict{UInt32, WAVMarker}()
 
     # See if list and cue chunks are present
-    list_chunks = chunks[find(c -> c.id == :LIST, chunks)]
-    cue_chunks = chunks[find(c -> c.id == Symbol("cue "), chunks)]
+    list_chunks = chunks[findall(c -> c.id == :LIST, chunks)]
+    cue_chunks = chunks[findall(c -> c.id == Symbol("cue "), chunks)]
 
     for l in list_chunks
         read_list(markers, l.data)
@@ -132,12 +132,12 @@ function write_marker_list(markers::Dict{UInt32, WAVMarker})
 
     # Create all the labl entries
     for (cue_id, marker) in markers
-        labl = [write32(cue_id); Vector{UInt8}(marker.label); 0x0]
+        labl = [write32(cue_id); codeunits(marker.label); 0x0]
 
         # The note and label entries must have an even number of bytes.
         # So, for the null terminated text in the label and note, we add a minimum of
         # one null terminator, but if that creates an odd number of bytes in the labl
-        # or note entry, then add a second null terminator. 
+        # or note entry, then add a second null terminator.
         if (length(labl) % 2) == 1
             labl = [labl; 0x0]
         end
@@ -171,17 +171,17 @@ function wav_info_write(tags::Dict{Symbol, String})
 
     # Create all the tag entries
     for t in keys(tags)
-        tag = [Vector{UInt8}(tags[t]); 0x0]
+        tag = [codeunits(tags[t]); 0x0]
 
         # The tag entries must have an even number of bytes.
         # So, for the null terminated text in the tag, we add a minimum of
         # one null terminator, but if that creates an odd number of bytes in the tag
-        # or note entry, then add a second null terminator. 
+        # or note entry, then add a second null terminator.
         if (length(tag) % 2) == 1
             tag = [tag; 0x0]
         end
 
-        info_data = [info_data; Vector{UInt8}(String(t)); write32(UInt32(length(tag))); tag]
+        info_data = [info_data; codeunits(String(t)); write32(UInt32(length(tag))); tag]
     end
     [WAVChunk(:LIST, info_data)]
 end
@@ -215,7 +215,7 @@ https://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/RIFF.html#Info
 function wav_info_read(chunks::Vector{WAVChunk})
     tags = Dict{Symbol, String}()
 
-    list_chunks = chunks[find(c -> c.id == :LIST, chunks)]
+    list_chunks = chunks[findall(c -> c.id == :LIST, chunks)]
     for l in list_chunks
         list_data = l.data
         if list_data[1:4] == b"INFO"
