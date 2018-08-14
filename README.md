@@ -68,7 +68,7 @@ of the WAV file.
 
 A ``WAVChunk`` is defined as
 ```julia
-type WAVChunk
+mutable struct WAVChunk
     id::Symbol
     data::Vector{UInt8}
 end
@@ -82,7 +82,7 @@ call ``getformat(opt)``. This will return an instance of type
 ``WAVFormat``. The ``WAVFormat`` type is defined as:
 
 ```julia
-immutable WAVFormat
+struct WAVFormat
     compression_code::UInt16
     nchannels::UInt16
     sample_rate::UInt32
@@ -96,7 +96,7 @@ end
 The ```ext``` field of type ```WAVFormatExtension``` is defined as:
 
 ```julia
-immutable WAVFormatExtension
+struct WAVFormatExtension
     nbits::UInt16 # overrides nbits in WAVFormat type
     channel_mask::UInt32
     sub_format::Array{UInt8, 1} # 16 byte GUID
@@ -185,12 +185,12 @@ compatible with MATLAB:
 ```julia
 wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, Fs=f)
 wavwrite(y::Array, f::Real, N::Real, filename::String) = wavwrite(y, filename, Fs=f, nbits=N)
-wavwrite{T<:Integer}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8)
-wavwrite{T<:Integer}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8)
+wavwrite(y::Array{T}, io::IO) where {T<:Integer} = wavwrite(y, io, nbits=sizeof(T)*8)
+wavwrite(y::Array{T}, filename::String) where {T<:Integer} = wavwrite(y, filename, nbits=sizeof(T)*8)
 wavwrite(y::Array{Int32}, io::IO) = wavwrite(y, io, nbits=24)
 wavwrite(y::Array{Int32}, filename::String) = wavwrite(y, filename, nbits=24)
-wavwrite{T<:FloatingPoint}(y::Array{T}, io::IO) = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
-wavwrite{T<:FloatingPoint}(y::Array{T}, filename::String) = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+wavwrite(y::Array{T}, io::IO) where {T<:FloatingPoint} = wavwrite(y, io, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
+wavwrite(y::Array{T}, filename::String) where {T<:FloatingPoint} = wavwrite(y, filename, nbits=sizeof(T)*8, compression=WAVE_FORMAT_IEEE_FLOAT)
 ```
 
 wavappend
@@ -225,7 +225,7 @@ wav_cue_read(chunks::Vector{WAVChunk})
 takes a ``Vector{WAVChunk}`` (as returned by ``wavread``) and returns a ``Vector{WAVMarker}``,
 where a ``WAVMarker`` is defined as:
 ```julia
-type WAVMarker
+mutable struct WAVMarker
     label::String
     start_time::UInt32
     duration::UInt32
