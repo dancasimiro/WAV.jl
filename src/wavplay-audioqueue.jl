@@ -2,8 +2,6 @@
 module WAVPlay
 import ..wavplay
 
-using Compat: Cvoid, undef
-
 const OSStatus = Int32
 const CFTypeRef = Ptr{Cvoid}
 const CFRunLoopRef = Ptr{Cvoid}

@@ -2,8 +2,7 @@
 module WAVPlay
 import ..wavplay
 
-using Compat: Cvoid, undef
-import Compat: Libdl
+import Libdl
 
 # typedef enum pa_sample_format
 const PA_SAMPLE_U8        =  0 # Unsigned 8 Bit PCM
