@@ -198,7 +198,7 @@ function enqueueBuffer(userData, buf)
     end
     nsamples -= 1
     end_offset = min(userData.offset + nsamples, userData.nSamples)
-    idx = ntuple(i -> i > 1 ? colon(1, size(userData.samples, i)) : userData.offset:end_offset,
+    idx = ntuple(i -> i > 1 ? (1:size(userData.samples, i)) : (userData.offset:end_offset),
                  ndims(userData.samples))
     AudioQueueEnqueueBuffer(userData.aq, buf, getindex(userData.samples, idx...))
     userData.offset = end_offset
@@ -266,8 +266,8 @@ function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::Audi
     runLoopMode = getCoreFoundationRunLoopDefaultMode()
 
     newAudioQueue = Array{AudioQueueRef, 1}(undef, 1)
-    cCallbackProc = cfunction(playCallback, Cvoid,
-                              (Ptr{AudioQueueData}, AudioQueueRef, AudioQueueBufferRef))
+    cCallbackProc = @cfunction(playCallback, Cvoid,
+                               (Ptr{AudioQueueData}, AudioQueueRef, AudioQueueBufferRef))
     result =
         ccall((:AudioQueueNewOutput, AudioToolbox), OSStatus,
               (Ptr{AudioStreamBasicDescription}, Ptr{Cvoid}, Ptr{AudioQueueData}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
