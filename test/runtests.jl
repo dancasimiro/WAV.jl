@@ -2,8 +2,6 @@
 ## Test suite for Julia's WAV module
 import WAV
 using Test
-using Compat
-using Compat: AbstractDisplay, findall, occursin, repr, String, undef
 
 # These float array comparison functions are from dists.jl
 function absdiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
@@ -251,7 +249,7 @@ seek(io, 4)
 chunk_size_old = WAV.read_le(io, UInt32)
 seek(io, 40)
 data_length_old = WAV.read_le(io, UInt32)
-### Append second chunk to wav-file 
+### Append second chunk to wav-file
 WAV.wavappend(
     x1,
     io)
@@ -259,12 +257,12 @@ seek(io, 4)
 chunk_size_new = WAV.read_le(io, UInt32)
 seek(io, 40)
 data_length_new = WAV.read_le(io, UInt32)
-### Compare data lengths. 
+### Compare data lengths.
 data_length_old_in_samples =
     round(Int32, data_length_old/(number_channels*number_bits)*8)
 data_length_new_in_samples =
     round(Int32, data_length_new/(number_channels*number_bits)*8)
-@test data_length_new_in_samples == 3*data_length_old_in_samples 
+@test data_length_new_in_samples == 3*data_length_old_in_samples
 @test (chunk_size_new-36) == 3*(chunk_size_old-36)
 
 ## Test native encoding of 8 bits
@@ -320,7 +318,7 @@ end
 
 ## Test encoding 32 bit values
 for nchans = (1,2,4)
-    in_data_single = convert(Array{Float32}, reshape(Compat.range(-1.0, stop=1.0, length=128), trunc(Int, 128 / nchans), nchans))
+    in_data_single = convert(Array{Float32}, reshape(range(-1.0, stop=1.0, length=128), trunc(Int, 128 / nchans), nchans))
     io = IOBuffer()
     WAV.wavwrite(in_data_single, io)
 
@@ -355,7 +353,7 @@ end
 
 ## Test encoding 64 bit values
 for nchans = (1,2,4)
-    in_data_single = convert(Array{Float64}, reshape(Compat.range(-1.0, stop=1.0, length=128), trunc(Int, 128 / nchans), nchans))
+    in_data_single = convert(Array{Float64}, reshape(range(-1.0, stop=1.0, length=128), trunc(Int, 128 / nchans), nchans))
     io = IOBuffer()
     WAV.wavwrite(in_data_single, io)
 
