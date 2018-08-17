@@ -27,7 +27,7 @@ wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
 write_le(stream::IO, value) = write(stream, htol(value))
-read_le(stream::IO, x::Type) = ltoh(read(stream, x))
+read_le(stream::IO, x::Type{T}) where {T} = ltoh(read(stream, T))
 
 # used by WAVE_FORMAT_EXTENSIBLE
 struct WAVFormatExtension
@@ -267,20 +267,20 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     samples
 end
 
-function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, floatType)
+function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, ::Type{floatType}) where {floatType}
     if isempty(subrange)
         return Array{floatType, 2}(undef, 0, fmt.nchannels)
     end
     nblocks = length(subrange)
-    samples = Array{floatType, 2}(undef, nblocks, fmt.nchannels)
+    samples = Array{floatType, 2}(undef, fmt.nchannels, nblocks)
     nbits = bits_per_sample(fmt)
     skip(io, convert(UInt, (first(subrange) - 1) * (nbits / 8) * fmt.nchannels))
-    for i = 1:nblocks
+    @inbounds for i = 1:nblocks
         for j = 1:fmt.nchannels
-            samples[i, j] = read_le(io, floatType)
+            samples[j, i] = read_le(io, floatType)
         end
     end
-    samples
+    copy(samples')
 end
 
 # take the loop variable type out of the loop
