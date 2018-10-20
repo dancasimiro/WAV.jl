@@ -9,21 +9,23 @@ export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MU
 import Libdl
 using FileIO
 
-function __init__()
-    module_dir = dirname(@__FILE__)
-    if Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"]) != ""
-        include(joinpath(module_dir, "wavplay-pulse.jl"))
-    elseif Libdl.find_library(["AudioToolbox"],
-                              ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
-        include(joinpath(module_dir, "wavplay-audioqueue.jl"))
-    else
-        include(joinpath(module_dir, "wavplay-unsupported.jl"))
-    end
+module_dir = dirname(@__FILE__)
+if Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"]) != ""
+    include(joinpath(module_dir, "wavplay-pulse.jl"))
+elseif Libdl.find_library(["AudioToolbox"],
+                          ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
+    include(joinpath(module_dir, "wavplay-audioqueue.jl"))
+else
+    include(joinpath(module_dir, "wavplay-unsupported.jl"))
 end
+
+import .WAVPlay
+WAVPlay.wavplay(fname) = wavplay(wavread(fname)[1:2]...)
+
+wavplay = WAVPlay.wavplay
 
 include("AudioDisplay.jl")
 include("WAVChunk.jl")
-wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
 write_le(stream::IO, value) = write(stream, htol(value))

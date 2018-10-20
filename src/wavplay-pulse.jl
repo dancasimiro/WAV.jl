@@ -1,6 +1,5 @@
 # -*- mode: julia; -*-
 module WAVPlay
-import ..wavplay
 
 import Libdl
 
