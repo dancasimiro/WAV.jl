@@ -8,6 +8,7 @@ export isextensible, isformat, bits_per_sample
 export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MULAW
 import Libdl
 using FileIO
+using Logging
 
 function __init__()
     module_dir = dirname(@__FILE__)
@@ -16,13 +17,13 @@ function __init__()
     elseif Libdl.find_library(["AudioToolbox"],
                               ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
         include(joinpath(module_dir, "wavplay-audioqueue.jl"))
-    else
-        include(joinpath(module_dir, "wavplay-unsupported.jl"))
     end
+    nothing
 end
 
 include("AudioDisplay.jl")
 include("WAVChunk.jl")
+wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
 wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
