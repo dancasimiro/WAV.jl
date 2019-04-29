@@ -25,6 +25,8 @@ function __init__()
             else
                 wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
             end
+        else
+            throw(e)
         end
     end
     nothing
