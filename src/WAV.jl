@@ -10,20 +10,18 @@ import Libdl
 using FileIO
 using Logging
 
-function __init__()
-    module_dir = dirname(@__FILE__)
-    if Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"]) != ""
-        include(joinpath(module_dir, "wavplay-pulse.jl"))
-    elseif Libdl.find_library(["AudioToolbox"],
-                              ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
-        include(joinpath(module_dir, "wavplay-audioqueue.jl"))
-    end
-    nothing
+
+if Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"]) != ""
+    include(joinpath(module_dir, "wavplay-pulse.jl"))
+elseif Libdl.find_library(["AudioToolbox"],
+                          ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
+    include("wavplay-audioqueue.jl")
+else
+    wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
 end
 
 include("AudioDisplay.jl")
 include("WAVChunk.jl")
-wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
 wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 
 # The WAV specification states that numbers are written to disk in little endian form.
