@@ -13,10 +13,11 @@ using Logging
 function __init__()
     module_dir = dirname(@__FILE__)
     try 
-        # check we haven't already imported this function into the namespace
-        WAVPlay
+        # check we haven't already imported this package into the namespace
+        # this will throw an error otherwise
+        WAV
     catch e
-        if isa(e, InitError)
+        if isa(e, UndefVarError) && e.var == :WAV
             if Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"]) != ""
                 include(joinpath(module_dir, "wavplay-pulse.jl"))
             elseif Libdl.find_library(["AudioToolbox"],
