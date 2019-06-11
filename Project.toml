@@ -1,0 +1,20 @@
+name = "WAV"
+uuid = "8149f6b0-98f6-5db9-b78f-408fbbb8ef88"
+authors = ["Daniel Casimiro <dan.casimiro@gmail.com>"]
+version = "1.0.2"
+
+[deps]
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[compat]
+FileIO = "≥ 0.2.0"
+julia = "≥ 0.7.0"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
