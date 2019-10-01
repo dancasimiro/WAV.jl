@@ -262,13 +262,14 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
         mask = UInt64(0)
     end
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
+    raw_sample = Vector{UInt8}(undef, nbytes*length(samples))
+    read!(io, raw_sample)
+    raw_sample = reshape(raw_sample, nbytes, size(samples, 2), size(samples, 1))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
-            raw_sample = Vector{UInt8}(undef, nbytes)
-            read!(io, raw_sample)
             my_sample = UInt64(0)
             for k = 1:nbytes
-                my_sample |= convert(UInt64, raw_sample[k]) << bitshift[k]
+                my_sample |= convert(UInt64, raw_sample[k,j,i]) << bitshift[k]
             end
             my_sample >>= nbytes * 8 - nbits
             # sign extend negative values
@@ -284,15 +285,12 @@ function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, ::Type{floatT
         return Array{floatType, 2}(undef, 0, fmt.nchannels)
     end
     nblocks = length(subrange)
-    samples = Array{floatType, 2}(undef, fmt.nchannels, nblocks)
+    samples = Array{floatType, 1}(undef, fmt.nchannels* nblocks)
     nbits = bits_per_sample(fmt)
     skip(io, convert(UInt, (first(subrange) - 1) * (nbits / 8) * fmt.nchannels))
-    @inbounds for i = 1:nblocks
-        for j = 1:fmt.nchannels
-            samples[j, i] = read_le(io, floatType)
-        end
-    end
-    copy(samples')
+    samples = Vector{floatType}(undef, fmt.nchannels*nblocks)
+    read!(io, samples) # read_le(stream::IO, x::Type{T}) where {T} = ltoh(fastread(stream, T))
+    copy(reshape(samples, Int(fmt.nchannels), Int(nblocks))')
 end
 
 # take the loop variable type out of the loop
