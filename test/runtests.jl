@@ -5,7 +5,7 @@ using Test
 
 # These float array comparison functions are from dists.jl
 function absdiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
-    @assert all(size(current) == size(target))
+    @test all(size(current) == size(target))
     maximum(abs.(current - target))
 end
 
@@ -14,12 +14,12 @@ function reldiff(current::T, target::T) where T <: Real
 end
 
 function reldiff(current::AbstractArray{T}, target::AbstractArray{T}) where T <: Real
-    @assert all(size(current) == size(target))
+    @test all(size(current) == size(target))
     maximum([reldiff(current[i], target[i]) for i in 1:numel(target)])
 end
 
 ## example from README, modified to use an IO buffer
-let
+@testset "1" begin
     x = [0:7999;]
     y = sin.(2 * pi * x / 8000)
     io = IOBuffer()
@@ -32,7 +32,7 @@ let
     y, Fs = WAV.wavread(io)
 end
 
-let
+@testset "2" begin
     x = [0:7999;]
     y = sin.(2 * pi * x / 8000)
     WAV.wavwrite(y, "example.wav", Fs=8000)
@@ -45,7 +45,7 @@ let
 end
 
 ## default arguments, GitHub Issue #10
-let
+@testset "3" begin
     tmp=rand(Float32,(10,2))
     io = IOBuffer()
     WAV.wavwrite(tmp, io; nbits=32)
@@ -59,7 +59,7 @@ let
 end
 
 ## malformed subchunk header, GitHub Issue #18
-let
+@testset "4" begin
     # Create a malformed WAV file
     samples = rand(Float32, (10, 1))
     io = IOBuffer()
@@ -105,7 +105,7 @@ let
     @test samples == y
 end
 
-let
+@testset "5" begin
     tmp=rand(Float64,(10,2))
     io = IOBuffer()
     WAV.wavwrite(tmp, io; nbits=64)
@@ -119,7 +119,7 @@ let
     @test WAV.isformat(fmt, WAV.WAVE_FORMAT_EXTENSIBLE)
 end
 
-let
+@testset "6" begin
     tmp=rand(Float32,(10,2))
     io = IOBuffer()
     WAV.wavwrite(tmp, io; compression=WAV.WAVE_FORMAT_IEEE_FLOAT)
@@ -137,6 +137,7 @@ function testread(io, ::Type{T}, sz) where T <: Real
     return a
 end
 
+@testset "7"  begin
 ## Test wavread and wavwrite
 ## Generate some wav files for writing and reading
 for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,24,32,64), nsamples = [0; 10 .^ (1:4)], nchans = 1:4
@@ -217,6 +218,9 @@ for fs = (8000,11025,22050,44100,48000,96000,192000), nbits = (1,7,8,9,12,16,20,
         @test absdiff(out_data, in_data[sr, :]) < tol
     end
 end
+end
+
+@testset "8" begin
 
 ## Test wavappend
 x0=rand(2,3)
@@ -537,9 +541,10 @@ for nbits = (32, 64), nsamples = [0; 10 .^ (1:4)], nchans = 1:2, fmt=(WAV.WAVE_F
         @test absdiff(out_data, in_data[sr, :]) < tol
     end
 end
+end
 
 ### Read unknown chunks, GitHub Issue #50
-let
+@testset "9" begin
     fs = 8000.0
     in_data = rand(1024, 2)
     io = IOBuffer()
@@ -558,7 +563,7 @@ let
 end
 
 ### Multiple LIST chunks, GitHub Issue #55
-let
+@testset "10" begin
     fs = 8000.0
     in_data = rand(1024, 2)
     io = IOBuffer()
@@ -579,7 +584,7 @@ let
 end
 
 # Test WAVMarker and WavChunk
-let
+@testset "11" begin
     io = IOBuffer()
     fs = 16000
     samples = rand(fs)
@@ -624,7 +629,7 @@ function display(d::TestHtmlDisplay, mime::MIME"text/html", x)
     print(d.io, repr(mime, x))
 end
 
-let
+@testset "12" begin
     io = IOBuffer()
     wa = WAV.WAVArray(8000, sin.(1:256 * 8000.0 / 1024));
     myio = IOBuffer()
@@ -634,7 +639,7 @@ end
 
 ### playback
 # The playback tests don't work on travis.
-let
+@testset "13" begin
     fs = 44100.0
     t = 1:44100;
     in_data = sin.(5.0 * t / fs) * 1e-6;
