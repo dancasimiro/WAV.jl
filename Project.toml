@@ -1,7 +1,7 @@
 name = "WAV"
 uuid = "8149f6b0-98f6-5db9-b78f-408fbbb8ef88"
 authors = ["Daniel Casimiro <dan.casimiro@gmail.com>"]
-version = "1.0.2"
+version = "1.0.3"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
