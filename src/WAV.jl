@@ -248,13 +248,27 @@ end
 
 ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
+## ignore skip for pipelines
+function Base.skip(::Base.Process, Uint64) end
+function Base.skip(::Base.ProcessChain, Uint64) end
+
+function read_raw_sample(io::IO, len::Integer)
+    ispipe = isa(io, Union{Base.Process, Base.ProcessChain})
+    if ispipe
+        return read(io)
+    else
+        return read(io, len)
+    end
+end
+
 function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     nbits = bits_per_sample(fmt)
     if isempty(subrange)
         return Array{pcm_container_type(nbits), 2}(undef, 0, fmt.nchannels)
     end
-    samples = Array{pcm_container_type(nbits), 2}(undef, length(subrange), fmt.nchannels)
-    sample_type = eltype(samples)
+    nrange = length(subrange)
+    nchan = Int(fmt.nchannels)
+    sample_type = pcm_container_type(nbits)
     nbytes = ceil(Integer, nbits / 8)
     bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
     mask = UInt64(0x1) << (nbits - 1)
@@ -262,11 +276,12 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
         mask = UInt64(0)
     end
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
-    raw_sample = Vector{UInt8}(undef, nbytes*length(samples))
-    read!(io, raw_sample)
-    raw_sample = reshape(raw_sample, nbytes, size(samples, 2), size(samples, 1))
-    for i = 1:size(samples, 1)
-        for j = 1:size(samples, 2)
+    raw_sample = read_raw_sample(io, nbytes * nrange * nchan)
+    nrange = length(raw_sample) ÷ (nbytes * nchan)
+    raw_sample = reshape(raw_sample, nbytes, nchan, nrange)
+    samples = Matrix{sample_type}(undef, nrange, nchan)
+    for i = 1:nrange
+        for j = 1:nchan
             my_sample = UInt64(0)
             for k = 1:nbytes
                 my_sample |= convert(UInt64, raw_sample[k,j,i]) << bitshift[k]

@@ -646,3 +646,21 @@ end
     #WAV.wavplay(in_data, fs);
     #WAV.wavplay([in_data in_data], fs);
 end
+
+## Read from pipeline, not knowing the length of the wav file that is read #80
+## This expects "sox" to be installed
+@testset "14" begin
+    x = [0:7999;]
+    y = sin.(2 * pi * x / 8000)
+    testfile = "example.wav"
+    WAV.wavwrite(y, testfile, Fs=8000)
+    for pipe in [`sox $testfile -t wav -r 16000 -c 1 -b 16 - speed 1.1`, 
+            pipeline(`sox $testfile -t wav -r 16000 -c 1 -b 16 - speed 1.1`),
+            pipeline(`sox $testfile -t wav -r 16000 -c 1 -b 16 -`, `sox -t wav - -t wav - speed 1.1`)]
+        io = open(pipe)
+        x, Fs = WAV.wavread(io) 
+        @assert Fs == 16000
+        @assert 16000/1.11 < length(x) < 16000/1.09
+    end
+    rm(testfile)
+end
