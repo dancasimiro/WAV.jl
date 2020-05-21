@@ -253,7 +253,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     if isempty(subrange)
         return Array{pcm_container_type(nbits), 2}(undef, 0, fmt.nchannels)
     end
-    samples = Array{UInt64, 2}(undef, length(subrange), fmt.nchannels)
+    samples = Array{UInt, 2}(undef, length(subrange), fmt.nchannels)
     sample_type = pcm_container_type(nbits)
     nbytes = ceil(Integer, nbits / 8)
     bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
