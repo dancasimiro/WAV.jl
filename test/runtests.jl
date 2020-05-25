@@ -636,13 +636,3 @@ end
     display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
     @test occursin(r"audio controls", String(take!(copy(myio))))
 end
-
-### playback
-# The playback tests don't work on travis.
-@testset "13" begin
-    fs = 44100.0
-    t = 1:44100;
-    in_data = sin.(5.0 * t / fs) * 1e-6;
-    #WAV.wavplay(in_data, fs);
-    #WAV.wavplay([in_data in_data], fs);
-end

@@ -19,7 +19,6 @@ Getting Started
 WAV provides `wavread`, `wavwrite`, and `wavappend` commands to read,
 write, and append WAV files. Here is an example to get you started. It
 generates some data, writes it to a file and then reads the data back.
-`wavplay` is also provided for simple audio playback.
 
 ```jlcon
 julia> using WAV
@@ -30,7 +29,6 @@ julia> y, fs = wavread("example.wav")
 julia> y = cos.(2 * pi * x / 8000)
 julia> wavappend(y, "example.wav")
 julia> y, fs = wavread("example.wav")
-julia> wavplay(y, fs)
 ```
 
 wavread
@@ -200,17 +198,6 @@ Append samples to an existing WAV file.  All parameters (data type and range, ou
 ```julia
 function wavappend(samples::Array, io::IO)
 function wavappend(samples::Array, filename::String)
-```
-
-wavplay
--------
-
-Playing audio back is also supported. The supported backends are:
-AudioQueue (MacOSX) and Pulse Audio (Linux, libpulse-simple). There is
-not a native backend for Windows yet.
-
-```julia
-function wavplay(samples::Array, fs::Number)
 ```
 
 WAVChunk
