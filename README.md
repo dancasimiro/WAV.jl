@@ -1,43 +1,55 @@
 WAV.jl
 ======
 
-[![WAV](http://pkg.julialang.org/badges/WAV_1.0.svg)](http://pkg.julialang.org/?pkg=WAV&ver=1.0)
 [![Build Status](https://travis-ci.org/dancasimiro/WAV.jl.png)](https://travis-ci.org/dancasimiro/WAV.jl)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/dancasimiro/wav.jl?branch=master&svg=true)](https://ci.appveyor.com/project/dancasimiro/wav-jl)
 [![Coverage Status](https://coveralls.io/repos/dancasimiro/WAV.jl/badge.png)](https://coveralls.io/r/dancasimiro/WAV.jl)
 
-This is a Julia package to read and write the WAV audio file format.
+This is a Julia package to read and write the [WAV audio file
+format](https://en.wikipedia.org/wiki/WAV).
+
+WAV provides `wavread`, `wavwrite` and `wavappend` functions to read,
+write, and append to WAV files. The function `wavplay` provides simple
+audio playback.
+
+These functions behave similarly to the former MATLAB functions of the
+same name.
 
 Installation
 ------------
 
-    julia> Pkg.add("WAV")
+    julia> ]
+    pkg> add WAV
 
 Getting Started
 ---------------
 
-WAV provides `wavread`, `wavwrite`, and `wavappend` commands to read,
-write, and append WAV files. Here is an example to get you started. It
-generates some data, writes it to a file and then reads the data back.
-`wavplay` is also provided for simple audio playback.
+The following example generates waveform data for a one second long 1
+kHz sine tone, at a sampling frequency of 8 kHz, writes it to a WAV
+file and then reads the data back. It then appends a 2 kHz tone to the
+same file and plays the result.
 
-```jlcon
-julia> using WAV
-julia> x = [0:7999;]
-julia> y = sin.(2 * pi * x / 8000)
-julia> wavwrite(y, "example.wav", Fs=8000)
-julia> y, fs = wavread("example.wav")
-julia> y = cos.(2 * pi * x / 8000)
-julia> wavappend(y, "example.wav")
-julia> y, fs = wavread("example.wav")
-julia> wavplay(y, fs)
+```julia
+using WAV
+fs = 8e3
+t = 0.0:1/fs:prevfloat(1.0)
+f = 1e3
+y = sin.(2pi * f * t)
+wavwrite(y, "example.wav", Fs=fs)
+
+y, fs = wavread("example.wav")
+y = sin.(2pi * 2f * t)
+wavappend(y, "example.wav")
+
+y, fs = wavread("example.wav")
+wavplay(y, fs)
 ```
 
 wavread
 -------
 
 This function reads the samples from a WAV file. The samples are converted to floating
-point values in the range from -1.0 to 1.0 by default.
+point values in the range −1.0 to 1.0 by default.
 
 ```julia
 function wavread(io::IO; subrange=Any, format="double")
@@ -47,7 +59,7 @@ function wavread(filename::String; subrange=Any, format="double")
 The available options, and the default values, are:
 
 * ``format`` (default = ``double``): changes the format of the returned samples. The string
-  ``double`` returns double precision floating point values in the range -1.0 to 1.0. The string
+  ``double`` returns double precision floating point values in the range −1.0 to 1.0. The string
   ``native`` returns the values as encoded in the file. The string ``size`` returns the number
   of samples in the file, rather than the actual samples.
 * ``subrange`` (default = ``Any``): controls which samples are returned. The default, ``Any``
@@ -118,7 +130,7 @@ The ```isformat``` function takes the ``WAVFormat`` object returned by
 constants, respectively. The function returns ```true``` when the
 samples are encoded in the specified ```code```.
 
-The following functions are also defined to make this function compatible with MATLAB:
+The following methods are also defined to make this function compatible with MATLAB’s former `wavread` function:
 
 ```julia
 wavread(filename::String, fmt::String) = wavread(filename, format=fmt)
@@ -178,8 +190,8 @@ are the following.
 Floating point (single and double precision) values are written to the
 file unaltered. The library will not modify the data range or representation.
 
-The following functions are also defined to make this function
-compatible with MATLAB:
+The following methods are also defined to make this function
+compatible with MATLAB’s former `wavwrite` function:
 
 ```julia
 wavwrite(y::Array, f::Real, filename::String) = wavwrite(y, filename, Fs=f)
@@ -250,11 +262,7 @@ correspond to the tag data.
 Other Julia Audio Packages
 -----------------------
 
-[AudioIO](https://github.com/ssfrr/AudioIO.jl) is another audio
-library in the Julia ecosystem. It supports more file formats
-(including WAV) and implements a more powerful playback
-interface. However, the license is more restrictive (GPL) because
-of a dependence on [libsndfile](http://www.mega-nerd.com/libsndfile/).
-
-Additionally, [FLAC.jl](https://github.com/dmbates/FLAC.jl) includes
-an ```mmap``` based WAV [reader](https://github.com/dmbates/FLAC.jl/blob/master/src/WAV.jl).
+[LibSndFile](https://github.com/JuliaAudio/LibSndFile.jl) is another
+Julia audio file library. It supports more file formats (including
+WAV) and implements a more powerful playback interface, all based on
+[libsndfile](http://www.mega-nerd.com/libsndfile/).
