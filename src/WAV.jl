@@ -11,17 +11,16 @@ using FileIO
 using Logging
 
 wavplay(fname) = wavplay(wavread(fname)[1:2]...)
-module_dir = dirname(@__FILE__)
 @static if Sys.islinux()
     @static if Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"]) != ""
-        include(joinpath(module_dir, "wavplay-pulse.jl"))
+        include("wavplay-pulse.jl")
     else
         wavplay(data, fs) = @warn "libpulse-simple not found, wavplay will not work"
     end
 elseif Sys.isapple()
     @static if Libdl.find_library(["AudioToolbox"],
                                   ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
-        include(joinpath(module_dir, "wavplay-audioqueue.jl"))
+        include("wavplay-audioqueue.jl")
     else
         wavplay(data, fs) = @warn "AudioToolbox.framework not found, wavplay will not work"
     end
