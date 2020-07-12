@@ -345,7 +345,7 @@ end
 
 ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
-function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
+function read_pcm_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
     nbits = bits_per_sample(fmt)
     if isempty(subrange)
         return Array{pcm_container_type(nbits), 2}(undef, 0, fmt.nchannels)
@@ -361,6 +361,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     skip(io, convert(UInt, (first(subrange) - 1) * nbytes * fmt.nchannels))
     raw_sample = Vector{UInt8}(undef, nbytes*length(samples))
     read!(io, raw_sample)
+    skip(io, chunk_size - convert(UInt, last(subrange) * nbytes * fmt.nchannels))
     raw_sample = reshape(raw_sample, nbytes, size(samples, 2), size(samples, 1))
     for i = 1:size(samples, 1)
         for j = 1:size(samples, 2)
@@ -377,7 +378,7 @@ function read_pcm_samples(io::IO, fmt::WAVFormat, subrange)
     samples
 end
 
-function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, ::Type{floatType}) where {floatType}
+function read_ieee_float_samples(io::IO, chunk_size, fmt::WAVFormat, subrange, ::Type{floatType}) where {floatType}
     if isempty(subrange)
         return Array{floatType, 2}(undef, 0, fmt.nchannels)
     end
@@ -387,16 +388,17 @@ function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange, ::Type{floatT
     skip(io, convert(UInt, (first(subrange) - 1) * (nbits / 8) * fmt.nchannels))
     samples = Vector{floatType}(undef, fmt.nchannels*nblocks)
     read!(io, samples) # read_le(stream::IO, x::Type{T}) where {T} = ltoh(fastread(stream, T))
+    skip(io, chunk_size - convert(UInt, last(subrange) * (nbits / 8) * fmt.nchannels))
     copy(reshape(samples, Int(fmt.nchannels), Int(nblocks))')
 end
 
 # take the loop variable type out of the loop
-function read_ieee_float_samples(io::IO, fmt::WAVFormat, subrange)
+function read_ieee_float_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
     floatType = ieee_float_container_type(bits_per_sample(fmt))
-    read_ieee_float_samples(io, fmt, subrange, floatType)
+    read_ieee_float_samples(io, chunk_size, fmt, subrange, floatType)
 end
 
-function read_companded_samples(io::IO, fmt::WAVFormat, subrange, table)
+function read_companded_samples(io::IO, chunk_size, fmt::WAVFormat, subrange, table)
     if isempty(subrange)
         return Array{eltype(table), 2}(undef, 0, fmt.nchannels)
     end
@@ -411,10 +413,11 @@ function read_companded_samples(io::IO, fmt::WAVFormat, subrange, table)
             samples[i, j] = table[compressedByte + 1]
         end
     end
+    skip(io, convert(UInt, chunk_size - last(subrange) * fmt.nchannels))
     return samples
 end
 
-function read_mulaw_samples(io::IO, fmt::WAVFormat, subrange)
+function read_mulaw_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
     # Quantized μ-law algorithm -- Use a look up table to convert
     # From Wikipedia, ITU-T Recommendation G.711 and G.191 specify the following intervals:
     #
@@ -476,10 +479,10 @@ function read_mulaw_samples(io::IO, fmt::WAVFormat, subrange)
     56,    48,    40,    32,    24,    16,     8,     0
      ]
     @assert length(MuLawDecompressTable) == 256
-    return read_companded_samples(io, fmt, subrange, MuLawDecompressTable)
+    return read_companded_samples(io, chunk_size, fmt, subrange, MuLawDecompressTable)
 end
 
-function read_alaw_samples(io::IO, fmt::WAVFormat, subrange)
+function read_alaw_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
     # Quantized A-law algorithm -- Use a look up table to convert
     ALawDecompressTable =
     [
@@ -517,7 +520,7 @@ function read_alaw_samples(io::IO, fmt::WAVFormat, subrange)
     944,   912,  1008,   976,   816,   784,   880,   848
      ]
     @assert length(ALawDecompressTable) == 256
-    return read_companded_samples(io, fmt, subrange, ALawDecompressTable)
+    return read_companded_samples(io, chunk_size, fmt, subrange, ALawDecompressTable)
 end
 
 function compress_sample_mulaw(sample)
@@ -634,15 +637,15 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
         subrange = 1:convert(UInt, chunk_size / fmt.block_align)
     end
     if isformat(fmt, WAVE_FORMAT_PCM)
-        samples = read_pcm_samples(io, fmt, subrange)
+        samples = read_pcm_samples(io, chunk_size, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, bits_per_sample(fmt))
     elseif isformat(fmt, WAVE_FORMAT_IEEE_FLOAT)
-        samples = read_ieee_float_samples(io, fmt, subrange)
+        samples = read_ieee_float_samples(io, chunk_size, fmt, subrange)
     elseif isformat(fmt, WAVE_FORMAT_MULAW)
-        samples = read_mulaw_samples(io, fmt, subrange)
+        samples = read_mulaw_samples(io, chunk_size, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, 16)
     elseif isformat(fmt, WAVE_FORMAT_ALAW)
-        samples = read_alaw_samples(io, fmt, subrange)
+        samples = read_alaw_samples(io, chunk_size, fmt, subrange)
         convert_to_double = x -> convert_pcm_to_double(x, 16)
     else
         error("$(fmt.compression_code) is an unsupported compression code!")
