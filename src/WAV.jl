@@ -15,8 +15,8 @@ This module also provides `wavread` and `wavwrite` as `load` and
 `save` methods for `format"WAV"` to the `FileIO` package.
 
 To read and write `CUE` and `INFO` chunks, there are experimental
-functions [`wav_cue_read`](@ref), [``wav_cue_write`](@ref),
-[``wav_info_read`](@ref), [``wav_info_write`](@ref).
+functions [`wav_cue_read`](@ref), [`wav_cue_write`](@ref),
+[`wav_info_read`](@ref), [`wav_info_write`](@ref).
 
 # Example
 ```julia
@@ -719,39 +719,45 @@ make_range(subrange) = subrange
 make_range(subrange::Number) = 1:convert(Int, subrange)
 
 """
-    wavread(io::IO; subrange=Any, format="double")
-    wavread(filename::String; subrange=Any, format="double")
+    wavread(io::IO; subrange=:, format="double")
+    wavread(filename::String; subrange=:, format="double")
 
 Reads the samples from a WAV file. The samples are converted to
 floating point values in the range −1.0 to 1.0 by default.
 
 The available options, and the default values, are:
 
-* `format` (default = `double`): changes the format of the returned
-  samples. The string `double` returns double precision floating point
-  values in the range −1.0 to 1.0. The string `native` returns the
-  values as encoded in the file. The string `size` returns the number
-  of samples in the file, rather than the actual samples.
-* `subrange` (default = `Any`): controls which samples are returned.
-  The default, `Any` returns all of the samples. Passing a number
-  (`Real`), `N`, will return the first `N` samples of each channel.
-  Passing a range (`Range1{Real}`), `R`, will return the samples in
-  that range of each channel.
+* `format` selects the form of data returned:
+  * `format="double"` (default) returns double-precision floating point
+    (`Float64`) values in the range −1.0 to 1.0.
+  * `format="native"` returns the values as encoded in the file.
+  * `format="size"` returns a 2-tuple (`n`, `m`) containing the number of
+    samples 'n' and the number of channels 'm' in the file (like `size(y)`),
+    rather than the regular 4-tuple `(y, Fs, nbits, opt)` with the
+    actual samples in `y`.
 
-The returned values are:
+* `subrange` controls which samples are returned.
+  The default (`:`) returns all samples in the file.
+  Passing an integer `N` (or equivalently the range `1:N`) returns
+  the first `N` samples of each channel.
+  Passing a unitrange `I:J` returns `length(I:J)` consecutive
+  samples from each channel, starting with the `I`-th sample.
 
-* `y`: The acoustic samples; A matrix is returned for files that
-  contain multiple channels.
-* `Fs`: The sampling frequency
-* `nbits`: The number of bits used to encode each sample
-* `opt`: A vector of `WAVChunk` elements representing optional chunks
-  found in the WAV file.
+The function returns a 4-tuple with elements
+
+* `y`: A 2-dimensional array containing the waveform samples,
+  where the row index represents the time axis
+  and the colum index the channel number
+* `Fs`: The sampling frequency in hertz
+* `nbits`: the number of bits used to encode each sample
+* `opt`: A vector of [`WAVChunk`](@ref) elements representing
+  optional chunksfound in the WAV file.
 
 The elements in the `opt` vector depend on the contents
 of the WAV file. A `WAVChunk` is defined as
 
 ```julia
-mutable struct WAVChunk
+struct WAVChunk
     id::Symbol
     data::Vector{UInt8}
 end
@@ -767,15 +773,13 @@ In order to obtain the contents of the format chunk, call
 The following methods are also defined to make this function
 compatible with MATLAB’s former `wavread` function:
 
-    wavread(filename::String, fmt::String) = wavread(filename, format=fmt)
-    wavread(filename::String, N::Int) = wavread(filename, subrange=N)
-    wavread(filename::String, N::Range1{Int}) = wavread(filename, subrange=N)
-    wavread(filename::String, N::Int, fmt::String) = wavread(filename, subrange=N, format=fmt)
-    wavread(filename::String, N::Range1{Int}, fmt::String) = wavread(filename, subrange=N, format=fmt)
+    wavread(filename::AbstractString, fmt::AbstractString) = wavread(filename, format=fmt)
+    wavread(filename::AbstractString, n) = wavread(filename, subrange=n)
+    wavread(filename::AbstractString, n, fmt) = wavread(filename, subrange=n, format=fmt)
 
 # Example
 
-    y, fs = wavread("example.wav")
+    y, fs, nbits, opt = wavread("example.wav")
 
 See also: [`wavwrite`](@ref)
 """
@@ -852,50 +856,78 @@ function get_default_precision(samples, compression)
 end
 
 """
-    wavwrite(samples::AbstractArray, io::IO;
+    wavwrite(y::AbstractArray, io::IO;
              Fs=8000, nbits=0, compression=0, chunks::Vector{WAVChunk}=WAVChunk[])
-    wavwrite(samples::AbstractArray, filename::String;
+    wavwrite(y::AbstractArray, filename::String;
              Fs=8000, nbits=0, compression=0, chunks::Vector{WAVChunk}=WAVChunk[])
 
-Writes samples in RIFF/WAVE format to a file. The second argument
-accepts either an ``IO`` object or a filename (``String``). The
-function assumes that the sample rate is 8 kHz and uses 16 bits to
-encode each sample. Both of these values can be changed with the
-optional parameters. Each column of the data represents a different
-channel. Stereo files should contain two columns.
+Writes sample matrix `y` in RIFF/WAVE format to a file. Each column of
+the data represents a different channel. Stereo files contain two
+columns (left and right).
 
-The available options, and their default values, are:
+The second argument accepts either an `IO` object or a filename
+(`String`).
 
-   * ``Fs`` (default = ``8000``): sampling frequency
-   * ``nbits`` (default = ``16``): number of bits used to encode each
-     sample
-   * ``compression`` (default = ``WAV_FORMAT_PCM``): controls the type of encoding used in the file
-   * ``chunks`` (default = ``WAVChunk[]``): a vector of ``WAVChunk`` objects to be written to the file (in addition to the format chunk). See below for some utilities for creating ``CUE`` and ``INFO``
-   chunks.
+The function choses by default a sample rate of 8 kHz and an output
+data type and bits-per-sample number based on `eltype(y)`. These
+defaults can be changed using optional keyword arguments:
 
-The type of the input array, samples, also affects the generated
-file. "Native" WAVE files are written when integers are passed into
-wavwrite. This means that the literal values are written into the
-file. The input ranges are as follows for integer samples.
+   * `Fs`: sampling frequency in hertz
+   * `nbits`: specify the number of bits to be used to encode each
+     sample; the default (0) is an automatic choice based on
+     the values of `compression` and `eltype(samples)`
+   * `compression` controls the type of encoding used in the file,
+     and can be one of
+     * `WAVE_FORMAT_PCM`: `UInt8`, `Int16`, etc. integer encoding
+     * `WAVE_FORMAT_IEEE_FLOAT`: `Float32` or `Float64` encoding
+     * `WAVE_FORMAT_ALAW`: ITU-T G.711 A-law encoding (8-bit log-scale,
+       used in European telephone networks)
+     * `WAVE_FORMAT_MULAW`: ITU-T G.711 µ-law encoding (8-bit log-scale,
+       used in American telephone networks)
+     The default (`0`) is to pick an encoding automatically based on
+     `typeof(samples)` (see below).
+   * `chunks` (default = `WAVChunk[]`): a vector of `WAVChunk` objects to be written to the file (in addition to the format chunk). See below for some utilities for creating `CUE` and `INFO` chunks.
 
-| N Bits | y Data Type | y Data Range           | Output Format |
-|--------|-------------|------------------------|---------------|
-| 8      | uint8       | 0 <= y <= 255          | uint8         |
-| 16     | int16       | –32768 <= y <= +32767  | int16         |
-| 24     | int32       | –2^23 <= y <= 2^23 – 1 | int32         |
+Unless otherwise specified via `nbits` and `compression`, the type of
+the input array `y` determines the data format used in the generated
+file. The function attempts to picks among the encodings commonly
+supported by other WAV-reading audio software the one that best
+preserves the provided input type.
 
-If samples contains floating point values, the input data ranges
-are the following.
+For `Integer` input arrays, and `compression=WAVE_FORMAT_PCM` or
+`compression=0`, the permitted sample-value ranges are:
 
-| N Bits | y Data Type      | y Data Range       | Output Format |
-|--------|------------------|--------------------|---------------|
-| 8      | single or double |  –1.0 <= y < +1.0  | uint8         |
-| 16     | single or double |  –1.0 <= y < +1.0  | int16         |
-| 24     | single or double |  –1.0 <= y < +1.0  | int32         |
-| 32     | single or double |  –1.0 <= y <= +1.0 | single        |
+|`nbits`| `eltype(y)` | supported range     | output type |
+|-------|-------------|---------------------|-------------|
+| 0     | UInt8,Int16 |    full range       | UInt8,Int16 |
+| 0     | Int32       |  –2^23 ≤ y < 2^23   | Int32       |
+| 8     | <: Integer  |      0 ≤ y ≤ 255    | UInt8       |
+| 16    | <: Integer  | –32768 ≤ y ≤ +32767 | Int16       |
+| 24    | <: Integer  |  –2^23 ≤ y < 2^23   | Int32       |
+| 32    | <: Integer  |  –2^31 ≤ y < 2^31   | Int32       |
 
-Floating point (single and double precision) values are written to the
-file unaltered. The library will not modify the data range or representation.
+If `y` is a floating-point array, and
+`compression=WAVE_FORMAT_IEEE_FLOAT` or `compression=0`, the full
+range of Float32 values are supported:
+
+|`nbits`| `eltype(y)`     | supported range     | output type |
+|-------|-----------------|---------------------|-------------|
+| 0     | Float32,Float64 | –Inf32 ≤ y ≤ +Inf32 | Float32     |
+| 32    | Float32,Float64 | –Inf32 ≤ y ≤ +Inf32 | Float32     |
+| 64    | Float32,Float64 | –Inf64 ≤ y ≤ +Inf64 | Float64     |
+
+If `y` is a floating-point array, and `compression=WAVE_FORMAT_PCM`,
+the input data ranges are:
+
+|`nbits`| `eltype(y)`      | supported range | output type |
+|-------|------------------|-----------------|-------------|
+| 8     | Float32, Float64 | –1.0 ≤ y ≤ +1.0 | UInt8       |
+| 16    | Float32, Float64 | –1.0 ≤ y ≤ +1.0 | Int16       |
+| 24    | Float32, Float64 | –1.0 ≤ y ≤ +1.0 | Int32       |
+| 32    | Float32, Float64 | –1.0 ≤ y ≤ +1.0 | Int32       |
+
+The output format column shows the element type returned by
+`wavread(..., format=-"native")`.
 
 The following methods are also defined to make this function
 compatible with MATLAB’s former `wavwrite` function:

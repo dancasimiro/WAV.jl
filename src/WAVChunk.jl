@@ -1,5 +1,6 @@
 """
-A RIFF chunk.
+`WAVChunk(id, data)` represents a RIFF chunk.
+Symbol `id` is the four-character chunk ID.
 """
 struct WAVChunk
     id::Symbol
@@ -88,8 +89,8 @@ end
 """
     wav_cue_read(chunks::Vector{WAVChunk})
 
-Takes a ``Vector{WAVChunk}`` (as returned by ``wavread``) and returns
-a ``Vector{WAVMarker}``, where a ``WAVMarker`` is defined as:
+Takes a `Vector{WAVChunk}` (as returned by `wavread`) and returns
+a `Vector{WAVMarker}`, where a `WAVMarker` is defined as:
 
 ```julia
 mutable struct WAVMarker
@@ -99,7 +100,7 @@ mutable struct WAVMarker
 end
 ```
 
-Field values ``start_time`` and ``duration`` are in samples.
+Field values `start_time` and `duration` are in samples.
 
 # Example
 ```julia
