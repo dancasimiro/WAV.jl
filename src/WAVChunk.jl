@@ -31,7 +31,7 @@ function read_adtl(markers::Dict{UInt32, WAVMarker}, adtl::Vector{UInt8})
     title  = String(adtl[1:4])
     size   = read32(adtl[5:8 ]...)
     cue_id = read32(adtl[9:12]...)
-    
+
     # The adtl entry must have even length. Therefore, if the reported length
     # is odd, actually read an extra byte.
     if size % 2 == 1
@@ -62,7 +62,7 @@ function read_list(markers::Dict{UInt32, WAVMarker}, list::Vector{UInt8})
         adtl = list[5:end]
         while (length(adtl) >= 12)
             adtl = read_adtl(markers, adtl)
-        end  
+        end
     end
 end
 
@@ -208,7 +208,7 @@ end
 function read_tag(tags::Dict{Symbol, String}, t::Vector{UInt8})
     tag_id = Symbol(String(t[1:4]))
     size   = read32(t[5:8 ]...)
-    
+
     # The adtl entry must have even length. Therefore, if the reported length
     # is odd, actually read an extra byte.
     if size % 2 == 1
