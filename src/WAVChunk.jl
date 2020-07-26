@@ -1,5 +1,6 @@
 """
-A RIFF chunk.
+`WAVChunk(id, data)` represents a RIFF chunk.
+Symbol `id` is the four-character chunk ID.
 """
 struct WAVChunk
     id::Symbol
@@ -31,7 +32,7 @@ function read_adtl(markers::Dict{UInt32, WAVMarker}, adtl::Vector{UInt8})
     title  = String(adtl[1:4])
     size   = read32(adtl[5:8 ]...)
     cue_id = read32(adtl[9:12]...)
-    
+
     # The adtl entry must have even length. Therefore, if the reported length
     # is odd, actually read an extra byte.
     if size % 2 == 1
@@ -62,7 +63,7 @@ function read_list(markers::Dict{UInt32, WAVMarker}, list::Vector{UInt8})
         adtl = list[5:end]
         while (length(adtl) >= 12)
             adtl = read_adtl(markers, adtl)
-        end  
+        end
     end
 end
 
@@ -86,8 +87,22 @@ function read_cue(markers::Dict{UInt32, WAVMarker}, cue::Vector{UInt8})
 end
 
 """
-Return the markers from a list of chunks.
-Example:
+    wav_cue_read(chunks::Vector{WAVChunk})
+
+Takes a `Vector{WAVChunk}` (as returned by `wavread`) and returns
+a `Vector{WAVMarker}`, where a `WAVMarker` is defined as:
+
+```julia
+mutable struct WAVMarker
+    label::String
+    start_time::UInt32
+    duration::UInt32
+end
+```
+
+Field values `start_time` and `duration` are in samples.
+
+# Example
 ```julia
 using WAV
 x, fs, bits, in_chunks = wavread("in.wav")
@@ -161,10 +176,15 @@ function write_marker_list(markers::Dict{UInt32, WAVMarker})
 end
 
 """
-`tags` is a dictionary where the keys are symbols representing RIFF INFO tag IDs:
-https://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/RIFF.html#Info
+    wav_info_write(tags::Dict{Symbol, String})::Vector{WAVChunk}
 
-Returns a list of chunks appropriate for passing to wavwrite.
+Converts a dictionary of INFO tags into a list of WAV chunks
+appropriate for passing to `wavwrite`.
+
+`tags` is a dictionary where the keys are symbols representing four-character
+RIFF INFO tag IDs as specified in
+https://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/RIFF.html#Info
+The values of the dictionary correspond to the tag data.
 """
 function wav_info_write(tags::Dict{Symbol, String})
     info_data = b"INFO"
@@ -189,7 +209,7 @@ end
 function read_tag(tags::Dict{Symbol, String}, t::Vector{UInt8})
     tag_id = Symbol(String(t[1:4]))
     size   = read32(t[5:8 ]...)
-    
+
     # The adtl entry must have even length. Therefore, if the reported length
     # is odd, actually read an extra byte.
     if size % 2 == 1
@@ -207,9 +227,11 @@ function read_tag(tags::Dict{Symbol, String}, t::Vector{UInt8})
 end
 
 """
-Given a list of chunks as returned by `wavread`, return a 
+    wav_info_read(chunks::Vector{WAVChunk})::Dict{Symbol, String}
+
+Given a list of chunks as returned by `wavread`, return a
 Dict{Symbol, String} where the keys are symbols representing
-RIFF INFO tag IDs:
+four-character RIFF INFO tag IDs as specified in
 https://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/RIFF.html#Info
 """
 function wav_info_read(chunks::Vector{WAVChunk})
@@ -231,7 +253,12 @@ end
 
 
 """
-Write markers into a list of chunks.
+    wav_cue_write(markers::Dict{UInt32, WAVMarker})
+
+Turns `WAVMarker`s into a `Vector{WAVChunk}` (as accepted by
+`wavwrite`). The key for the dictionary is the ID of the marker to be
+written to file.
+
 Example:
 ```julia
 out_chunks = wav_cue_write(markers)
@@ -244,4 +271,3 @@ function wav_cue_write(markers::Dict{UInt32, WAVMarker})
     push!(chunks, WAVChunk(:LIST, write_marker_list(markers)))
     chunks
 end
-
