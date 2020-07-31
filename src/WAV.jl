@@ -55,8 +55,7 @@ both from the WAV file named `filename`.
 The supported backends are:
 * AudioQueue (macOS)
 * PulseAudio (Linux, libpulse-simple)
-
-There is not a native backend for Windows yet.
+* PlaySound  (Windows)
 """
 function wavplay end
 wavplay(fname) = wavplay(wavread(fname)[1:2]...)
@@ -64,6 +63,8 @@ wavplay(fname) = wavplay(wavread(fname)[1:2]...)
     include("wavplay-pulse.jl")
 elseif Sys.isapple()
     include("wavplay-audioqueue.jl")
+elseif Sys.iswindows()
+    include("wavplay-win32.jl")
 else
     wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
 end
