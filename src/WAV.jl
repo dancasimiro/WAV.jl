@@ -61,18 +61,9 @@ There is not a native backend for Windows yet.
 function wavplay end
 wavplay(fname) = wavplay(wavread(fname)[1:2]...)
 @static if Sys.islinux()
-    @static if Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"]) != ""
-        include("wavplay-pulse.jl")
-    else
-        wavplay(data, fs) = @warn "libpulse-simple not found, wavplay will not work"
-    end
+    include("wavplay-pulse.jl")
 elseif Sys.isapple()
-    @static if Libdl.find_library(["AudioToolbox"],
-                                  ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
-        include("wavplay-audioqueue.jl")
-    else
-        wavplay(data, fs) = @warn "AudioToolbox.framework not found, wavplay will not work"
-    end
+    include("wavplay-audioqueue.jl")
 else
     wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
 end
