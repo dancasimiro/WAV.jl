@@ -45,30 +45,6 @@ import Libdl
 using FileIO
 using Logging
 
-"""
-    wavplay(data, fs)
-    wavplay(filename)
-
-Plays the audio waveform `data` at sampling frequency `fs`, or read
-both from the WAV file named `filename`.
-
-The supported backends are:
-* AudioQueue (macOS)
-* PulseAudio (Linux, libpulse-simple)
-* PlaySound  (Windows)
-"""
-function wavplay end
-wavplay(fname) = wavplay(wavread(fname)[1:2]...)
-@static if Sys.islinux()
-    include("wavplay-pulse.jl")
-elseif Sys.isapple()
-    include("wavplay-audioqueue.jl")
-elseif Sys.iswindows()
-    include("wavplay-win32.jl")
-else
-    wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
-end
-
 include("AudioDisplay.jl")
 include("WAVChunk.jl")
 
@@ -1070,5 +1046,35 @@ save(s::Stream{format"WAV"}, data; kwargs...) = wavwrite(data, s.io; kwargs...)
 
 load(f::File{format"WAV"}; kwargs...) = wavread(f.filename; kwargs...)
 save(f::File{format"WAV"}, data; kwargs...) = wavwrite(data, f.filename; kwargs...)
+
+"""
+    wavplay(data, fs)
+    wavplay(filename::AbstractString)
+
+Plays the audio waveform `data` at sampling frequency `fs` (in hertz).
+To play a stereo signal, provide two columns in array `data` (left and
+right channel), as in [`wavwrite`](@ref).
+
+The `filename` form reads both waveform data and sampling frequency
+from the named WAV file to play it.
+
+The supported backends are:
+* AudioQueue (macOS)
+* PulseAudio (Linux, libpulse-simple)
+* PlaySound  (Windows)
+
+See also: [`wavwrite`](@ref)
+"""
+function wavplay end
+wavplay(fname::AbstractString) = wavplay(wavread(fname)[1:2]...)
+@static if Sys.islinux()
+    include("wavplay-pulse.jl")
+elseif Sys.isapple()
+    include("wavplay-audioqueue.jl")
+elseif Sys.iswindows()
+    include("wavplay-win32.jl")
+else
+    wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
+end
 
 end # module

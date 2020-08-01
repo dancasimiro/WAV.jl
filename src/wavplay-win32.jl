@@ -1,6 +1,6 @@
 # -*- mode: julia; -*-
 module WAVPlay
-import ..wavplay
+import WAV: wavplay, wavwrite
 
 # some standard Win32 API types and constants, see [MS-DTYP]
 const BOOL = Cint
