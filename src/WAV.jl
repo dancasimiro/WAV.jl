@@ -24,11 +24,11 @@ using WAV
 fs = 8e3
 t = 0.0:1/fs:prevfloat(1.0)
 f = 1e3
-y = sin.(2pi * f * t)
+y = sin.(2pi * f * t) * 0.1
 wavwrite(y, "example.wav", Fs=fs)
 
 y, fs = wavread("example.wav")
-y = sin.(2pi * 2f * t)
+y = sin.(2pi * 2f * t) * 0.1
 wavappend(y, "example.wav")
 
 y, fs = wavread("example.wav")
@@ -44,38 +44,6 @@ export WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT, WAVE_FORMAT_ALAW, WAVE_FORMAT_MU
 import Libdl
 using FileIO
 using Logging
-
-"""
-    wavplay(data, fs)
-    wavplay(filename)
-
-Plays the audio waveform `data` at sampling frequency `fs`, or read
-both from the WAV file named `filename`.
-
-The supported backends are:
-* AudioQueue (macOS)
-* PulseAudio (Linux, libpulse-simple)
-
-There is not a native backend for Windows yet.
-"""
-function wavplay end
-wavplay(fname) = wavplay(wavread(fname)[1:2]...)
-@static if Sys.islinux()
-    @static if Libdl.find_library(["libpulse-simple", "libpulse-simple.so.0"]) != ""
-        include("wavplay-pulse.jl")
-    else
-        wavplay(data, fs) = @warn "libpulse-simple not found, wavplay will not work"
-    end
-elseif Sys.isapple()
-    @static if Libdl.find_library(["AudioToolbox"],
-                                  ["/System/Library/Frameworks/AudioToolbox.framework/Versions/A"]) != ""
-        include("wavplay-audioqueue.jl")
-    else
-        wavplay(data, fs) = @warn "AudioToolbox.framework not found, wavplay will not work"
-    end
-else
-    wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
-end
 
 include("AudioDisplay.jl")
 include("WAVChunk.jl")
@@ -720,7 +688,7 @@ make_range(subrange::Number) = 1:convert(Int, subrange)
 
 """
     wavread(io::IO; subrange=:, format="double")
-    wavread(filename::String; subrange=:, format="double")
+    wavread(filename::AbstractString; subrange=:, format="double")
 
 Reads the samples from a WAV file. The samples are converted to
 floating point values in the range −1.0 to 1.0 by default.
@@ -1078,5 +1046,35 @@ save(s::Stream{format"WAV"}, data; kwargs...) = wavwrite(data, s.io; kwargs...)
 
 load(f::File{format"WAV"}; kwargs...) = wavread(f.filename; kwargs...)
 save(f::File{format"WAV"}, data; kwargs...) = wavwrite(data, f.filename; kwargs...)
+
+"""
+    wavplay(data, fs)
+    wavplay(filename::AbstractString)
+
+Plays the audio waveform `data` at sampling frequency `fs` (in hertz).
+To play a stereo signal, provide two columns in array `data` (left and
+right channel), as in [`wavwrite`](@ref).
+
+The `filename` form reads both waveform data and sampling frequency
+from the named WAV file to play it.
+
+The supported backends are:
+* AudioQueue (macOS)
+* PulseAudio (Linux, libpulse-simple)
+* PlaySound  (Windows)
+
+See also: [`wavwrite`](@ref)
+"""
+function wavplay end
+wavplay(fname::AbstractString) = wavplay(wavread(fname)[1:2]...)
+@static if Sys.islinux()
+    include("wavplay-pulse.jl")
+elseif Sys.isapple()
+    include("wavplay-audioqueue.jl")
+elseif Sys.iswindows()
+    include("wavplay-win32.jl")
+else
+    wavplay(data, fs) = @warn "wavplay is not currently implemented on $(Sys.KERNEL)"
+end
 
 end # module

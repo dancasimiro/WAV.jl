@@ -638,11 +638,15 @@ end
 end
 
 ### playback
-# The playback tests don't work on travis.
-@testset "13" begin
-    fs = 44100.0
-    t = 1:44100;
-    in_data = sin.(5.0 * t / fs) * 1e-6;
-    #WAV.wavplay(in_data, fs);
-    #WAV.wavplay([in_data in_data], fs);
+if !haskey(ENV, "CI")
+    @testset "13" begin
+        fs = 44100.0
+        t = 0.0:fs-1.0;
+        left_data  = sin.(2pi * 500.0 * t / fs) * 1e-1;
+        right_data = sin.(2pi * 800.0 * t / fs) * 1e-1;
+        # 500 Hz mono
+        @test WAV.wavplay(left_data, fs) === nothing;
+        # 500 Hz left, 800 Hz right stereo
+        @test WAV.wavplay([left_data right_data], fs) === nothing;
+    end
 end
