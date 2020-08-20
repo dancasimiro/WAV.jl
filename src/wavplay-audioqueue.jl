@@ -108,16 +108,17 @@ struct AudioStreamBasicDescription
                                                       0)
 end
 
-mutable struct AudioQueueData
-    samples::Array
+mutable struct AudioQueueData{T,N}
+    samples::Array{T,N}
     aq::AudioQueueRef
     offset::Int
     nSamples::Int
     nBuffersEnqueued::UInt
     runLoop::CFRunLoopRef
 
-    AudioQueueData(samples) = new(samples, convert(AudioQueueRef, 0), 1,
-                                  size(samples, 1), 0, convert(CFRunLoopRef, 0))
+    AudioQueueData(samples) =
+        new{eltype(samples),ndims(samples)}(samples, convert(AudioQueueRef, 0), 0,
+                                            size(samples, 1), 0, convert(CFRunLoopRef, 0))
 end
 
 function AudioQueueFreeBuffer(aq::AudioQueueRef, buf::AudioQueueBufferRef)
@@ -145,34 +146,20 @@ end
 #     On return, points to the newly created audio buffer. The mAudioDataByteSize field in the
 #     audio queue buffer structure, AudioQueueBuffer, is initially set to 0.
 # @result     An OSStatus result code.
-function AudioQueueAllocateBuffer(aq)
-    newBuffer = Array{AudioQueueBufferRef, 1}(undef, 1)
+function AudioQueueAllocateBuffer(aq::AudioQueueRef,
+                                  BufferByteSize::Integer)::AudioQueueBufferRef
+    newBuffer = Ref{AudioQueueBufferRef}(0)
     result =
         ccall((:AudioQueueAllocateBuffer, AudioToolbox), OSStatus,
-              (AudioQueueRef, UInt32, Ptr{AudioQueueBufferRef}),
-              aq, 4096, newBuffer)
+              (AudioQueueRef, UInt32, Ref{AudioQueueBufferRef}),
+              aq, BufferByteSize, newBuffer)
     if result != 0
         error("AudioQueueAllocateBuffer failed with $result")
     end
-    buf = newBuffer[1]
-    return buf
+    return newBuffer[]
 end
 
-function AudioQueueEnqueueBuffer(aq, bufPtr, data)
-    buffer = unsafe_load(bufPtr)
-    @assert buffer.mAudioDataBytesCapacity / sizeof(eltype(data)) >= length(data)
-
-    nChannels = size(data, 2)
-    coreAudioData = convert(Ptr{eltype(data)}, buffer.mAudioData)
-    for i = 1:size(data, 1) # for each sample
-        coreAudioIndex = (nChannels * (i - 1))
-        for j = 1:nChannels
-            unsafe_store!(coreAudioData, data[i, j], coreAudioIndex + j)
-        end
-    end
-    buffer.mAudioDataByteSize = sizeof(data)
-
-    unsafe_store!(bufPtr, buffer)
+function AudioQueueEnqueueBuffer(aq::AudioQueueRef, bufPtr::AudioQueueBufferRef)
     result = ccall((:AudioQueueEnqueueBuffer, AudioToolbox),
                    OSStatus,
                    (AudioQueueRef, AudioQueueBufferRef, UInt32, Ptr{Cvoid}),
@@ -182,40 +169,52 @@ function AudioQueueEnqueueBuffer(aq, bufPtr, data)
     end
 end
 
-function enqueueBuffer(userData, buf)
+@inline function enqueueBuffer(userData::AudioQueueData{T,N},
+                               buf::AudioQueueBufferRef) where {T,N}
+    # @inline needed to keep playCallback allocation free
     if userData.offset >= userData.nSamples
         return false
     end
-    nsamples::Int = 512
-    chans = ndims(userData.samples)
-    if chans > 2
-        error("Playback of $chans-channel files is not supported")
+
+    buffer::AudioQueueBuffer = unsafe_load(buf)
+
+    nFrames::Int = buffer.mAudioDataBytesCapacity ÷
+        (sizeof(T) * size(userData.samples, 2))
+
+    offset = userData.offset
+    nFrames = min(nFrames, userData.nSamples - offset)
+
+    nChannels = size(userData.samples, 2)
+    coreAudioData = convert(Ptr{T}, buffer.mAudioData)
+    if nChannels == 1
+        for i = 1:nFrames
+            unsafe_store!(coreAudioData, userData.samples[i+offset], i)
+        end
+    else
+        coreAudioIndex = 0
+        for i = 1:nFrames
+            for j = 1:nChannels
+                coreAudioIndex += 1
+                unsafe_store!(coreAudioData, userData.samples[i+offset, j], coreAudioIndex)
+            end
+        end
     end
-    if chans == 2
-        nsamples /= size(userData.samples, 2)
-    end
-    nsamples -= 1
-    end_offset = min(userData.offset + nsamples, userData.nSamples)
-    idx = ntuple(i -> i > 1 ? (1:size(userData.samples, i)) : (userData.offset:end_offset),
-                 ndims(userData.samples))
-    AudioQueueEnqueueBuffer(userData.aq, buf, getindex(userData.samples, idx...))
-    userData.offset = end_offset
+    buffer.mAudioDataByteSize = nFrames * nChannels * sizeof(T)
+
+    unsafe_store!(buf, buffer)
+
+    userData.offset = offset + nFrames
     userData.nBuffersEnqueued += 1
+    AudioQueueEnqueueBuffer(userData.aq, buf)
     return true
 end
 
-function allocateAllBuffers(userData)
-    buffers = AudioQueueBufferRef[]
-    for i = 1:kNumberBuffers
-        buf = AudioQueueAllocateBuffer(userData.aq)
-        push!(buffers, buf)
-    end
-    return buffers
-end
+allocateAllBuffers(userData, nbuffers, bufsize) =
+    AudioQueueBufferRef[AudioQueueAllocateBuffer(userData.aq, bufsize) for i=1:nbuffers]
 
-function playCallback(data_::Ptr{AudioQueueData}, aq::AudioQueueRef, buf::AudioQueueBufferRef)
-    userData = unsafe_load(data_)
-    userData.nBuffersEnqueued -= 1
+function playCallback(userData::AudioQueueData{T,N}, aq::AudioQueueRef,
+                      buf::AudioQueueBufferRef) where {T,N}
+    userData.nBuffersEnqueued::UInt -= 1
     if !enqueueBuffer(userData, buf)
         AudioQueueFreeBuffer(aq, buf)
         if userData.nBuffersEnqueued == 0
@@ -223,7 +222,6 @@ function playCallback(data_::Ptr{AudioQueueData}, aq::AudioQueueRef, buf::AudioQ
             CFRunLoopStop(userData.runLoop) # can I tell it to stop when work is done?
         end
     end
-    unsafe_store!(data_, userData)
     return
 end
 
@@ -258,22 +256,24 @@ end
 #     On return, this variable contains a pointer to the newly created playback audio queue
 #     object.
 # @result     An OSStatus result code.
-function AudioQueueNewOutput(format::AudioStreamBasicDescription, userData::AudioQueueData)
+function AudioQueueNewOutput(format::AudioStreamBasicDescription,
+                             userData::AudioQueueData{T,N}) where {T,N}
     runLoop = CFRunLoopGetCurrent()
     userData.runLoop = runLoop
     runLoopMode = getCoreFoundationRunLoopDefaultMode()
 
-    newAudioQueue = Array{AudioQueueRef, 1}(undef, 1)
+    newAudioQueue = Ref{AudioQueueRef}(0)
     cCallbackProc = @cfunction(playCallback, Cvoid,
-                               (Ptr{AudioQueueData}, AudioQueueRef, AudioQueueBufferRef))
+                               (Ref{AudioQueueData{T,N}}, AudioQueueRef, AudioQueueBufferRef))
     result =
         ccall((:AudioQueueNewOutput, AudioToolbox), OSStatus,
-              (Ptr{AudioStreamBasicDescription}, Ptr{Cvoid}, Ptr{AudioQueueData}, CFRunLoopRef, CFStringRef, UInt32, Ptr{AudioQueueRef}),
+              (Ptr{AudioStreamBasicDescription}, Ptr{Cvoid}, Ref{AudioQueueData{T,N}},
+               CFRunLoopRef, CFStringRef, UInt32, Ref{AudioQueueRef}),
               Ref(format), cCallbackProc, Ref(userData), runLoop, runLoopMode, 0, newAudioQueue)
     if result != 0
         error("AudioQueueNewOutput failed with $result")
     end
-    return newAudioQueue[1]
+    return newAudioQueue[]
 end
 
 function AudioQueueDispose(aq::AudioQueueRef, immediate::Bool)
@@ -341,6 +341,8 @@ function getFormatFlags(el)
         flags |= kAudioFormatFlagIsFloat
     elseif el <: Integer
         flags |= kAudioFormatFlagIsSignedInteger
+    else
+        error("Array element type $(el) not supported for wavplay data")
     end
     return flags
 end
@@ -361,10 +363,10 @@ function getFormatForData(data, fs)
                                        elSize * 8)          # bits per channel
 end
 
-function wavplay(data, fs)
+function wavplay(data::AbstractVecOrMat{<:Real}, fs::Real)
     userData = AudioQueueData(data)
     userData.aq = AudioQueueNewOutput(getFormatForData(data, fs), userData)
-    for buf in allocateAllBuffers(userData)
+    for buf in allocateAllBuffers(userData, kNumberBuffers, 16384)
         enqueueBuffer(userData, buf)
     end
     AudioQueueStart(userData.aq)
