@@ -793,7 +793,7 @@ function wavread(io::IO; subrange=(:), format="double")
         end
         seek(io, nextchunk_start)
     end
-    if data_size > 0 && data_position > 0
+    if data_position != 0
         seek(io, data_position)
         if format == "size"
             return convert(Int, data_size / fmt.block_align), convert(Int, fmt.nchannels)
