@@ -758,20 +758,20 @@ function wavread(io::IO; subrange=(:), format="double")
     sample_rate = Float32(0.0)
     opt = WAVChunk[]
 
-    # Note: This assumes that the format chunk is written in the file before the data chunk. The
-    # specification does not require this assumption, but most real files are written that way.
-
     # Subtract the size of the format field from chunk_size; now it holds the size
     # of all the sub-chunks
     chunk_size -= 4
     # GitHub Issue #18: Check if there is enough data to read another chunk
     subchunk_header_size = 4 + sizeof(UInt32)
     fmt = WAVFormat()
+    data_position = 0
+    data_size = 0
     while chunk_size >= subchunk_header_size
         # Read subchunk ID and size
         subchunk_id = Vector{UInt8}(undef, 4)
         read!(io, subchunk_id)
         subchunk_size = read_le(io, UInt32)
+        nextchunk_start = position(io) + subchunk_size
         if subchunk_size > chunk_size
             chunk_size = 0
             break
@@ -784,15 +784,21 @@ function wavread(io::IO; subrange=(:), format="double")
             nbits = bits_per_sample(fmt)
             push!(opt, WAVChunk(fmt))
         elseif subchunk_id == b"data"
-            if format == "size"
-                return convert(Int, subchunk_size / fmt.block_align), convert(Int, fmt.nchannels)
-            end
-            samples = read_data(io, subchunk_size, fmt, format, make_range(subrange))
+            data_position = position(io)
+            data_size = subchunk_size
         else
             subchunk_data = Vector{UInt8}(undef, subchunk_size)
             read!(io, subchunk_data)
             push!(opt, WAVChunk(Symbol(subchunk_id), subchunk_data))
         end
+        seek(io, nextchunk_start)
+    end
+    if data_size > 0 && data_position > 0
+        seek(io, data_position)
+        if format == "size"
+            return convert(Int, data_size / fmt.block_align), convert(Int, fmt.nchannels)
+        end
+        samples = read_data(io, data_size, fmt, format, make_range(subrange))
     end
     return samples, sample_rate, nbits, opt
 end
