@@ -11,7 +11,7 @@ Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [compat]
 FileIO = "1.4.3"
-julia = "1.5.2"
+julia = "0.7, 1.5"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
