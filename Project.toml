@@ -10,7 +10,7 @@ Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [compat]
-FileIO = "1.4.3"
+FileIO = "0.2, 1.4"
 julia = "0.7, 1.5"
 
 [extras]
