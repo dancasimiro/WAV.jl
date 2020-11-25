@@ -318,8 +318,8 @@ function read_pcm_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
     if isempty(subrange)
         return Array{pcm_container_type(nbits), 2}(undef, 0, fmt.nchannels)
     end
-    samples = Array{pcm_container_type(nbits), 2}(undef, length(subrange), fmt.nchannels)
-    sample_type = eltype(samples)
+    samples = Array{UInt64, 2}(undef, length(subrange), fmt.nchannels)
+    sample_type = pcm_container_type(nbits)
     nbytes = ceil(Integer, nbits / 8)
     bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
     mask = UInt64(0x1) << (nbits - 1)
@@ -339,11 +339,10 @@ function read_pcm_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
             end
             my_sample >>= nbytes * 8 - nbits
             # sign extend negative values
-            my_sample = xor(my_sample, mask) - mask
-            samples[i, j] = convert(sample_type, signed(my_sample))
+            samples[i, j] = xor(my_sample, mask) - mask
         end
     end
-    samples
+    convert.(sample_type, signed.(samples))
 end
 
 function read_ieee_float_samples(io::IO, chunk_size, fmt::WAVFormat, subrange, ::Type{floatType}) where {floatType}
