@@ -222,8 +222,12 @@ function read_tag(tags::Dict{Symbol, String}, t::Vector{UInt8})
     end
     tags[tag_id] = String(t[9:(i-1)])
 
-    # Skip the null terminator
-    t[(i+1):end]
+    # Skip null terminator/s, repeat in case multiple are present
+    while t[i] == 0 && i < length(t) 
+        i += 1
+    end
+    # Return remainder of t
+    return t[i:end]
 end
 
 """
