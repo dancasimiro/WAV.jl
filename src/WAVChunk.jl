@@ -217,13 +217,14 @@ function read_tag(tags::Dict{Symbol, String}, t::Vector{UInt8})
     end
 
     i = 9
+    # Find first null terminator
     while t[i] != 0
         i += 1
     end
     tags[tag_id] = String(t[9:(i-1)])
 
-    # Skip the null terminator
-    t[(i+1):end]
+    # Return remainder of t, skipping all data past first null terminator
+    return t[(9+size):end]
 end
 
 """
