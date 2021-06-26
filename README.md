@@ -1,9 +1,8 @@
 WAV.jl
 ======
 
-[![Build Status](https://travis-ci.org/dancasimiro/WAV.jl.png)](https://travis-ci.org/dancasimiro/WAV.jl)
-[![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/dancasimiro/wav.jl?branch=master&svg=true)](https://ci.appveyor.com/project/dancasimiro/wav-jl)
-[![Coverage Status](https://coveralls.io/repos/dancasimiro/WAV.jl/badge.png)](https://coveralls.io/r/dancasimiro/WAV.jl)
+[![Build status](https://github.com/dancasimiro/WAV.jl/workflows/CI/badge.svg)](https://github.com/dancasimiro/WAV.jl/actions)
+[![codecov](https://codecov.io/gh/dancasimiro/WAV.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/dancasimiro/WAV.jl)
 
 This is a Julia package to read and write the [WAV audio file
 format](https://en.wikipedia.org/wiki/WAV).
