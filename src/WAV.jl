@@ -313,13 +313,13 @@ end
 
 ieee_float_container_type(nbits) = (nbits == 32 ? Float32 : (nbits == 64 ? Float64 : error("$nbits bits is not supported for WAVE_FORMAT_IEEE_FLOAT.")))
 
-function read_pcm_samples(io::IO, chunk_size, fmt::WAVFormat, subrange)
+function read_pcm_samples(io::IO, chunk_size, fmt::WAVFormat, subrange,
+                          ::Type{sample_type}) where {sample_type}
     nbits = bits_per_sample(fmt)
     if isempty(subrange)
-        return Array{pcm_container_type(nbits), 2}(undef, 0, fmt.nchannels)
+        return Array{sample_type, 2}(undef, 0, fmt.nchannels)    
     end
-    samples = Array{pcm_container_type(nbits), 2}(undef, length(subrange), fmt.nchannels)
-    sample_type = eltype(samples)
+    samples = Array{sample_type, 2}(undef, length(subrange), fmt.nchannels)
     nbytes = ceil(Integer, nbits / 8)
     bitshift = [0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40]
     mask = UInt64(0x1) << (nbits - 1)
@@ -605,7 +605,8 @@ function read_data(io::IO, chunk_size, fmt::WAVFormat, format, subrange)
         subrange = 1:convert(UInt, chunk_size / fmt.block_align)
     end
     if isformat(fmt, WAVE_FORMAT_PCM)
-        samples = read_pcm_samples(io, chunk_size, fmt, subrange)
+        samples = read_pcm_samples(io, chunk_size, fmt, subrange,
+                                   pcm_container_type(bits_per_sample(fmt)))
         convert_to_double = x -> convert_pcm_to_double(x, bits_per_sample(fmt))
     elseif isformat(fmt, WAVE_FORMAT_IEEE_FLOAT)
         samples = read_ieee_float_samples(io, chunk_size, fmt, subrange)
