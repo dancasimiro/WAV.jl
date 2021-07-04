@@ -30,11 +30,11 @@ function show(io::IO, ::MIME"text/html", x::WAVArray)
     wavwrite(x, buf)
     data = base64encode(String(take!(copy(buf))))
     markup = """<figure>
-    $(ifelse(x.caption !== "", "<figcaption>$(x.caption)</figcaption>", ""))
-    <audio controls="controls" {autoplay}>
-    <source src="data:audio/wav;base64,$data" type="audio/wav" />
-    Your browser does not support the audio element.
-    </audio>
-    </figure>"""
+                $(ifelse(x.caption !== "", "<figcaption>$(x.caption)</figcaption>", ""))
+                    <audio controls="controls" {autoplay}>
+                    <source src="data:audio/wav;base64,$data" type="audio/wav" />
+                    Your browser does not support the audio element.
+                    </audio>
+                </figure>"""
     print(io, markup)
 end
