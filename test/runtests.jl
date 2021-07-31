@@ -630,11 +630,45 @@ function display(d::TestHtmlDisplay, mime::MIME"text/html", x)
 end
 
 @testset "12" begin
-    io = IOBuffer()
     wa = WAV.WAVArray(8000, sin.(1:256 * 8000.0 / 1024));
     myio = IOBuffer()
     display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
     @test occursin(r"audio controls", String(take!(copy(myio))))
+
+    wa = WAV.WAVArray(8000, sin.(1:256 * 8000.0 / 1024), "WAVArray caption test");
+    seek(myio, 0)
+    display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
+    @test occursin(r"audio controls", String(take!(copy(myio))))
+
+    x = [0:7999;]
+    y = sin.(2 * pi * x / 8000)
+    io = IOBuffer()
+    WAV.wavwrite(y, io, Fs=8000)
+    seek(io,0)
+    wa = WAV.WAVArray(io)
+    myio = IOBuffer()
+    seek(myio, 0)
+    display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
+    @test occursin(r"audio controls", String(take!(copy(myio))))
+
+    seek(io,0)
+    wa = WAV.WAVArray(io, "WAVArray caption test")
+    seek(myio, 0)
+    display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
+    @test occursin(r"audio controls", String(take!(copy(myio))))
+
+    WAV.wavwrite(y, "example.wav", Fs=8000)
+    wa = WAV.WAVArray("example.wav")
+    seek(myio, 0)
+    display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
+    @test occursin(r"audio controls", String(take!(copy(myio))))
+
+    wa = WAV.WAVArray("example.wav", "WAVArray caption test")
+    seek(myio, 0)
+    display(TestHtmlDisplay(myio), MIME"text/html"(), wa)
+    @test occursin(r"audio controls", String(take!(copy(myio))))
+
+    rm("example.wav")
 end
 
 ### playback
