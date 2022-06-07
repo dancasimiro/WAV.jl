@@ -57,5 +57,7 @@ Other Julia Audio Packages
 
 [LibSndFile](https://github.com/JuliaAudio/LibSndFile.jl) is another
 Julia audio file library. It supports more file formats (including
-WAV) and implements a more powerful playback interface, all based on
-[libsndfile](http://www.mega-nerd.com/libsndfile/).
+WAV), all based on
+[libsndfile](http://www.mega-nerd.com/libsndfile/).  
+[PortAudio](https://github.com/JuliaAudio/PortAudio.jl) provides a 
+more powerful playback interface and even allows recording. 
