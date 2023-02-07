@@ -208,6 +208,8 @@ end
 
 function read_header(io::IO)
     # check if the given file has a valid RIFF header
+    # make sure we are at the beginning of the file
+    seekstart(io)
     riff = Vector{UInt8}(undef, 4)
     read!(io, riff)
     if riff !=  b"RIFF"
